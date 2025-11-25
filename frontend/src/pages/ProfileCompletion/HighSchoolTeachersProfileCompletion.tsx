@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import Select from "react-select";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 const bgImages = [
@@ -13,31 +14,76 @@ const bgImages = [
 ];
 
 interface TeacherProfile {
+  teacher_id: string; // Added teacher ID
   first_name: string;
   last_name: string;
   gender: string;
   date_of_birth: string;
   school_name: string;
-  subjects_taught: string;
-  grade_levels: string;
-  employee_id: string;
+  subjects_taught: string[];
+  grade_levels: string[];
+  zone: string;
+  woreda: string;
+  subcity: string;
+  region: string;
   years_of_experience: string;
   profile_picture: File | null;
   profile_picture_preview: string;
 }
 
+const regions = [
+  "Addis Ababa",
+  "Oromia",
+  "Amhara",
+  "Tigray",
+  "Southern Nations, Nationalities, and Peoples' Region",
+  "Afar",
+  "Somali",
+  "Benishangul-Gumuz",
+  "Gambela",
+  "Harari",
+];
+
+const gradeOptions = [
+  { value: "9", label: "Grade 9" },
+  { value: "10", label: "Grade 10" },
+  { value: "11", label: "Grade 11" },
+  { value: "12", label: "Grade 12" },
+];
+
+const subjectOptions = [
+  { value: "math", label: "Mathematics" },
+  { value: "physics", label: "Physics" },
+  { value: "chemistry", label: "Chemistry" },
+  { value: "biology", label: "Biology" },
+  { value: "english", label: "English" },
+  { value: "amharic", label: "Amharic" },
+  { value: "geography", label: "Geography" },
+  { value: "history", label: "History" },
+  { value: "civics", label: "Civics" },
+  { value: "economics", label: "Economics" },
+  { value: "agriculture", label: "Agriculture" },
+  { value: "ict", label: "ICT" },
+  { value: "Civic", label: "Civic" },
+  { value: "afaan-oromoo", label: "Afaan Oromoo" },
+];
+
 const HighSchoolTeachersProfileCompletion: React.FC = () => {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<TeacherProfile>({
+    teacher_id: "", // Added teacher ID
     first_name: "",
     last_name: "",
     gender: "",
     date_of_birth: "",
     school_name: "",
-    subjects_taught: "",
-    grade_levels: "",
-    employee_id: "",
+    subjects_taught: [],
+    grade_levels: [],
+    zone: "",
+    woreda: "",
+    subcity: "",
+    region: "",
     years_of_experience: "",
     profile_picture: null,
     profile_picture_preview: "",
@@ -50,11 +96,6 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
   const [profileProgress, setProfileProgress] = useState(0);
   const [currentBg, setCurrentBg] = useState(0);
 
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [inputCode, setInputCode] = useState("");
-  const [verified, setVerified] = useState(false);
-
-  // Background image rotation
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % bgImages.length);
@@ -62,20 +103,12 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Redirect after verification
-  useEffect(() => {
-    if (verified) {
-      setTimeout(() => navigate("/h-s-teacher/dashboard"), 800);
-    }
-  }, [verified, navigate]);
-
-  // Profile progress tracking
   useEffect(() => {
     let filled = 0;
     Object.entries(profile).forEach(([key, value]) => {
-      if (value && key !== "profile_picture" && key !== "profile_picture_preview") filled += 1;
+      if (Array.isArray(value) ? value.length > 0 : value) filled += 1;
     });
-    setProfileProgress(Math.round((filled / 9) * 100));
+    setProfileProgress(Math.round((filled / 13) * 100)); // 13 fields now including teacher_id
   }, [profile]);
 
   const handleChange = (
@@ -96,7 +129,9 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
   const validateForm = () => {
     for (let key in profile) {
       if (
-        !profile[key as keyof TeacherProfile] &&
+        (Array.isArray(profile[key as keyof TeacherProfile])
+          ? (profile[key as keyof TeacherProfile] as any[]).length === 0
+          : !profile[key as keyof TeacherProfile]) &&
         key !== "profile_picture" &&
         key !== "profile_picture_preview"
       ) {
@@ -120,14 +155,13 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      setVerificationSent(true);
-      setSuccessMsg("Verification email sent! Enter the code to continue.");
+      setSuccessMsg("Profile completed successfully!");
+      setTimeout(() => navigate("/h-s-teacher/dashboard"), 1000);
     }, 1500);
   };
 
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gray-100">
-      {/* Background Animation */}
       <AnimatePresence>
         <motion.img
           key={currentBg}
@@ -141,7 +175,6 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
         />
       </AnimatePresence>
 
-      {/* Center Button */}
       {!showForm && (
         <motion.button
           initial={{ scale: 0 }}
@@ -159,7 +192,6 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
         </motion.button>
       )}
 
-      {/* Form Section */}
       {showForm && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -168,10 +200,9 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
           className="relative z-10 bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full"
         >
           <h2 className="text-3xl font-bold text-center text-purple-700 mb-6">
-            👩🏫 High School Teacher Profile
+            🏫 High School Teacher Profile
           </h2>
 
-          {/* Progress Bar */}
           <div className="mb-4">
             <div className="h-4 w-full bg-gray-200 rounded-full">
               <motion.div
@@ -187,118 +218,95 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
           {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
           {successMsg && <div className="alert alert-success">{successMsg}</div>}
 
-          {/* Verification Step */}
-          {verificationSent && !verified ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 p-4 border-2 border-purple-400 rounded-lg bg-gray-50"
-            >
-              <h3 className="text-lg font-bold mb-2 text-center text-blue-700">
-                Email Verification
-              </h3>
-              <p className="text-center mb-4 text-gray-700">
-                Enter the 6-digit code sent to your email.
-              </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Profile Picture */}
+            <div className="text-center mb-4">
+              {profile.profile_picture_preview ? (
+                <img
+                  src={profile.profile_picture_preview}
+                  alt="profile preview"
+                  className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-purple-500"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-4 border-purple-500">
+                  <span className="text-gray-500">No Image</span>
+                </div>
+              )}
               <input
-                type="text"
-                value={inputCode}
-                onChange={(e) => setInputCode(e.target.value)}
-                placeholder="Enter code"
-                className="form-control mb-3 border-2 border-purple-400 rounded"
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="form-control mt-2"
               />
-              <button
-                type="button"
-                className="btn w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white"
-                onClick={() => {
-                  if (inputCode === "123456") {
-                    setVerified(true);
-                    setSuccessMsg("Email verified! Redirecting to your dashboard...");
-                    setErrorMsg("");
-                  } else {
-                    setErrorMsg("Invalid code, try again.");
-                  }
-                }}
-              >
-                Verify Email
-              </button>
-            </motion.div>
-          ) : !verificationSent ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Profile Picture */}
-              <div className="text-center mb-4">
-                {profile.profile_picture_preview ? (
-                  <img
-                    src={profile.profile_picture_preview}
-                    alt="profile preview"
-                    className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-purple-500"
-                  />
-                ) : (
-                  <div className="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-4 border-purple-500">
-                    <span className="text-gray-500">No Image</span>
-                  </div>
-                )}
+            </div>
+
+            {/* Teacher ID, First Name & Last Name */}
+            <div className="row">
+             
+              <div className="col-md-4 mb-3">
+                <label className="form-label font-semibold">First Name</label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="form-control mt-2"
+                  type="text"
+                  name="first_name"
+                  value={profile.first_name}
+                  onChange={handleChange}
+                  className="form-control border-2 border-blue-400"
                 />
               </div>
-
-              {/* Name Fields */}
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">First Name</label>
-                  <input
-                    type="text"
-                    name="first_name"
-                    value={profile.first_name}
-                    onChange={handleChange}
-                    className="form-control border-2 border-blue-400"
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Last Name</label>
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={profile.last_name}
-                    onChange={handleChange}
-                    className="form-control border-2 border-pink-400"
-                  />
-                </div>
+              <div className="col-md-4 mb-3">
+                <label className="form-label font-semibold">Last Name</label>
+                <input
+                  type="text"
+                  name="last_name"
+                  value={profile.last_name}
+                  onChange={handleChange}
+                  className="form-control border-2 border-pink-400"
+                />
               </div>
-
-              {/* Gender and DOB */}
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Gender</label>
-                  <select
-                    name="gender"
-                    value={profile.gender}
-                    onChange={handleChange}
-                    className="form-select border-2 border-purple-400"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Date of Birth</label>
-                  <input
-                    type="date"
-                    name="date_of_birth"
-                    value={profile.date_of_birth}
-                    onChange={handleChange}
-                    className="form-control border-2 border-blue-400"
-                  />
-                </div>
+               <div className="col-md-4 mb-3">
+                <label className="form-label font-semibold">Teacher ID</label>
+                <input
+                  type="text"
+                  name="teacher_id"
+                  value={profile.teacher_id}
+                  onChange={handleChange}
+                  className="form-control border-2 border-blue-400"
+                />
               </div>
+            </div>
 
-              {/* School Name */}
-              <div className="mb-3">
+            {/* Remaining fields (Gender, DOB, School, Subjects, Grades, Zone, Woreda, Subcity, Region, Experience) remain the same */}
+
+            {/* Gender & DOB */}
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Gender</label>
+                <select
+                  name="gender"
+                  value={profile.gender}
+                  onChange={handleChange}
+                  className="form-select border-2 border-purple-400"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Date of Birth</label>
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={profile.date_of_birth}
+                  onChange={handleChange}
+                  className="form-control border-2 border-blue-400"
+                />
+              </div>
+            </div>
+
+           {/* School Name & Region */}
+            <div className="flex gap-4">
+              <div className="flex-1">
                 <label className="form-label font-semibold">School Name</label>
                 <input
                   type="text"
@@ -308,66 +316,106 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
                   className="form-control border-2 border-purple-400"
                 />
               </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Region</label>
+                <select
+                  name="region"
+                  value={profile.region}
+                  onChange={handleChange}
+                  className="form-select border-2 border-pink-400"
+                >
+                  <option value="">Select Region</option>
+                  {regions.map((r, idx) => (
+                    <option key={idx} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {/* Multi-select Grade & Subject */}
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Subject(s) Taught</label>
+                <Select
+                  isMulti
+                  options={subjectOptions}
+                  value={subjectOptions.filter(sub => profile.subjects_taught.includes(sub.value))}
+                  onChange={(selected) => setProfile({
+                    ...profile,
+                    subjects_taught: (selected as any).map((s: any) => s.value)
+                  })}
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Grade Level(s)</label>
+                <Select
+                  isMulti
+                  options={gradeOptions}
+                  value={gradeOptions.filter(g => profile.grade_levels.includes(g.value))}
+                  onChange={(selected) => setProfile({
+                    ...profile,
+                    grade_levels: (selected as any).map((g: any) => g.value)
+                  })}
+                />
+              </div>
+            </div>
 
-              {/* Subject(s) and Grade Level(s) */}
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Subject(s) Taught</label>
-                  <input
-                    type="text"
-                    name="subjects_taught"
-                    value={profile.subjects_taught}
-                    onChange={handleChange}
-                    className="form-control border-2 border-blue-400"
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Grade Level(s)</label>
-                  <input
-                    type="text"
-                    name="grade_levels"
-                    value={profile.grade_levels}
-                    onChange={handleChange}
-                    placeholder="e.g., 9–12 or Entrance"
-                    className="form-control border-2 border-pink-400"
-                  />
-                </div>
+            {/* Zone, Woreda, Subcity, Region, Experience */}
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Zone where the school is found</label>
+                <input
+                  type="text"
+                  name="zone"
+                  value={profile.zone}
+                  onChange={handleChange}
+                  className="form-control border-2 border-blue-400"
+                />
+              </div>
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Woreda</label>
+                <input
+                  type="text"
+                  name="woreda"
+                  value={profile.woreda}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
+                />
+              </div>
+            </div>
+
+            <div className="row">
+              <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Subcity</label>
+                <input
+                  type="text"
+                  name="subcity"
+                  value={profile.subcity}
+                  onChange={handleChange}
+                  className="form-control border-2 border-blue-400"
+                />
               </div>
 
-              {/* Employee ID and Experience */}
-              <div className="row">
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Employee ID</label>
-                  <input
-                    type="text"
-                    name="employee_id"
-                    value={profile.employee_id}
-                    onChange={handleChange}
-                    className="form-control border-2 border-blue-400"
-                  />
-                </div>
-                <div className="col-md-6 mb-3">
-                  <label className="form-label font-semibold">Years of Experience</label>
-                  <input
-                    type="number"
-                    min={0}
-                    name="years_of_experience"
-                    value={profile.years_of_experience}
-                    onChange={handleChange}
-                    className="form-control border-2 border-purple-400"
-                  />
-                </div>
+             <div className="col-md-6 mb-3">
+                <label className="form-label font-semibold">Years of Experience</label>
+                <input
+                  type="number"
+                  min={0}
+                  name="years_of_experience"
+                  value={profile.years_of_experience}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
+                />
               </div>
+          </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn w-full mt-3 text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:scale-105 transition-transform"
-              >
-                {loading ? "Saving..." : "Complete Profile"}
-              </button>
-            </form>
-          ) : null}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn w-full mt-3 text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:scale-105 transition-transform"
+            >
+              {loading ? "Saving..." : "Complete Profile"}
+            </button>
+          </form>
         </motion.div>
       )}
     </div>

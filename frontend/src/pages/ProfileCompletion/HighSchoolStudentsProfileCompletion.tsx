@@ -36,6 +36,7 @@ interface StudentProfile {
   date_of_birth: string;
   school_name: string;
   region: string;
+  zone: string; // Added zone
   city: string;
   woreda: string;
   grade_level: string;
@@ -54,6 +55,7 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
     date_of_birth: "",
     school_name: "",
     region: "",
+    zone: "", // Added zone
     city: "",
     woreda: "",
     grade_level: "",
@@ -69,11 +71,7 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
   const [profileProgress, setProfileProgress] = useState(0);
   const [currentBg, setCurrentBg] = useState(0);
 
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [inputCode, setInputCode] = useState("");
-  const [verified, setVerified] = useState(false);
-
-  // Background animation (pop from back to front)
+  // Background animation
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % bgImages.length);
@@ -81,23 +79,15 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Redirect after verification
-  useEffect(() => {
-    if (verified) {
-      setTimeout(() => navigate("/h-s-student"), 800);
-    }
-  }, [verified, navigate]);
-
   // Profile completion progress
   useEffect(() => {
     let filled = 0;
     Object.entries(profile).forEach(([key, value]) => {
       if (value && key !== "profile_picture" && key !== "profile_picture_preview") filled += 1;
     });
-    setProfileProgress(Math.round((filled / 9) * 100));
+    setProfileProgress(Math.round((filled / 11) * 100)); // 11 fields now
   }, [profile]);
 
-  // Handle form changes
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -136,8 +126,8 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      setVerificationSent(true);
-      setSuccessMsg("Verification email sent! Enter the code to continue.");
+      setSuccessMsg("Profile completed successfully!");
+      setTimeout(() => navigate("/h-s-student/dashboard"), 1000);
     }, 1500);
   };
 
@@ -184,7 +174,7 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
           className="relative z-10 bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full"
         >
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
-            High School Student Profile
+             🏫 High School Student Profile
           </h2>
 
           <div className="mb-4">
@@ -202,208 +192,181 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
           {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
           {successMsg && <div className="alert alert-success">{successMsg}</div>}
 
-          {!verificationSent && (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Profile Picture */}
-              <div className="text-center mb-4">
-                {profile.profile_picture_preview ? (
-                  <img
-                    src={profile.profile_picture_preview}
-                    alt="profile preview"
-                    className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-blue-500"
-                  />
-                ) : (
-                  <div className="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-4 border-blue-500">
-                    <span className="text-gray-500">No Image</span>
-                  </div>
-                )}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Profile Picture */}
+            <div className="text-center mb-4">
+              {profile.profile_picture_preview ? (
+                <img
+                  src={profile.profile_picture_preview}
+                  alt="profile preview"
+                  className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-blue-500"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-4 border-blue-500">
+                  <span className="text-gray-500">No Image</span>
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="form-control mt-2"
+              />
+            </div>
+
+            {/* First Name & Last Name */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="form-label font-semibold">First Name</label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="form-control mt-2"
+                  type="text"
+                  name="first_name"
+                  value={profile.first_name}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
                 />
               </div>
-
-              {/* First Name & Last Name */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="form-label font-semibold">First Name</label>
-                  <input
-                    type="text"
-                    name="first_name"
-                    value={profile.first_name}
-                    onChange={handleChange}
-                    className="form-control border-2 border-purple-400"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Last Name</label>
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={profile.last_name}
-                    onChange={handleChange}
-                    className="form-control border-2 border-pink-400"
-                  />
-                </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Last Name</label>
+                <input
+                  type="text"
+                  name="last_name"
+                  value={profile.last_name}
+                  onChange={handleChange}
+                  className="form-control border-2 border-pink-400"
+                />
               </div>
-
-              {/* Gender & DOB */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Gender</label>
-                  <select
-                    name="gender"
-                    value={profile.gender}
-                    onChange={handleChange}
-                    className="form-select border-2 border-blue-400"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Date of Birth</label>
-                  <input
-                    type="date"
-                    name="date_of_birth"
-                    value={profile.date_of_birth}
-                    onChange={handleChange}
-                    className="form-control border-2 border-purple-300"
-                  />
-                </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Student ID</label>
+                <input
+                  type="text"
+                  name="student_id"
+                  value={profile.student_id}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
+                />
               </div>
+            </div>
 
-              {/* School Name & Region */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="form-label font-semibold">School Name</label>
-                  <input
-                    type="text"
-                    name="school_name"
-                    value={profile.school_name}
-                    onChange={handleChange}
-                    className="form-control border-2 border-purple-400"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Region</label>
-                  <select
-                    name="region"
-                    value={profile.region}
-                    onChange={handleChange}
-                    className="form-select border-2 border-pink-400"
-                  >
-                    <option value="">Select Region</option>
-                    {regions.map((r, idx) => (
-                      <option key={idx} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
+            {/* Gender & DOB */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="form-label font-semibold">Gender</label>
+                <select
+                  name="gender"
+                  value={profile.gender}
+                  onChange={handleChange}
+                  className="form-select border-2 border-blue-400"
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
               </div>
-
-              {/* City & Woreda */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="form-label font-semibold">City</label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={profile.city}
-                    onChange={handleChange}
-                    className="form-control border-2 border-blue-400"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Woreda</label>
-                  <input
-                    type="text"
-                    name="woreda"
-                    value={profile.woreda}
-                    onChange={handleChange}
-                    className="form-control border-2 border-purple-400"
-                  />
-                </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Date of Birth</label>
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={profile.date_of_birth}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-300"
+                />
               </div>
+            </div>
 
-              {/* Grade & Student ID */}
-              <div className="flex gap-4">
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Grade Level</label>
-                  <select
-                    name="grade_level"
-                    value={profile.grade_level}
-                    onChange={handleChange}
-                    className="form-select border-2 border-blue-400"
-                  >
-                    <option value="">Select Grade</option>
-                    <option value="9">Grade 9</option>
-                    <option value="10">Grade 10</option>
-                    <option value="11">Grade 11</option>
-                    <option value="12">Grade 12</option>
-                  </select>
-                </div>
-                <div className="flex-1">
-                  <label className="form-label font-semibold">Student ID</label>
-                  <input
-                    type="text"
-                    name="student_id"
-                    value={profile.student_id}
-                    onChange={handleChange}
-                    className="form-control border-2 border-purple-400"
-                  />
-                </div>
+            {/* School Name & Region */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="form-label font-semibold">School Name</label>
+                <input
+                  type="text"
+                  name="school_name"
+                  value={profile.school_name}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
+                />
               </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Region</label>
+                <select
+                  name="region"
+                  value={profile.region}
+                  onChange={handleChange}
+                  className="form-select border-2 border-pink-400"
+                >
+                  <option value="">Select Region</option>
+                  {regions.map((r, idx) => (
+                    <option key={idx} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn w-full mt-4 text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:scale-105 transition-transform"
-              >
-                {loading ? "Saving..." : "Complete Profile"}
-              </button>
-            </form>
-          )}
+          
+            {/* City & Woreda */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <label className="form-label font-semibold">City</label>
+                <input
+                  type="text"
+                  name="city"
+                  value={profile.city}
+                  onChange={handleChange}
+                  className="form-control border-2 border-blue-400"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Woreda</label>
+                <input
+                  type="text"
+                  name="woreda"
+                  value={profile.woreda}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
+                />
+              </div>
+            </div>
 
-          {/* Verification Section */}
-          {verificationSent && !verified && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 p-4 border-2 border-blue-400 rounded-lg bg-gray-50"
-            >
-              <h3 className="text-lg font-bold mb-2 text-center text-blue-700">
-                Email Verification
-              </h3>
-              <p className="text-center mb-4 text-gray-700">
-                Enter the verification code sent to your email.
-              </p>
+            {/* Grade & Student ID */}
+            <div className="flex gap-4">
+                {/* Zone */}
+            <div className="mt-2">
+              <label className="form-label font-semibold">Zone where the school is found</label>
               <input
                 type="text"
-                value={inputCode}
-                onChange={(e) => setInputCode(e.target.value)}
-                placeholder="Enter code"
-                className="form-control mb-3 border-2 border-purple-400 rounded"
+                name="zone"
+                value={profile.zone}
+                onChange={handleChange}
+                className="form-control border-2 border-blue-400"
               />
-              <button
-                type="button"
-                className="btn w-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white"
-                onClick={() => {
-                  if (inputCode === "123456") {
-                    setVerified(true);
-                    setSuccessMsg("Email verified! Redirecting to your dashboard...");
-                    setErrorMsg("");
-                  } else {
-                    setErrorMsg("Invalid code, try again.");
-                  }
-                }}
-              >
-                Verify Email
-              </button>
-            </motion.div>
-          )}
+            </div>
+
+              <div className="flex-1">
+                <label className="form-label font-semibold">Grade Level</label>
+                <select
+                  name="grade_level"
+                  value={profile.grade_level}
+                  onChange={handleChange}
+                  className="form-select border-2 border-blue-400"
+                >
+                  <option value="">Select Grade</option>
+                  <option value="9">Grade 9</option>
+                  <option value="10">Grade 10</option>
+                  <option value="11">Grade 11</option>
+                  <option value="12">Grade 12</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn w-full mt-4 text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:scale-105 transition-transform"
+            >
+              {loading ? "Saving..." : "Complete Profile"}
+            </button>
+          </form>
         </motion.div>
       )}
     </div>

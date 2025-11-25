@@ -27,9 +27,7 @@ const HighSchoolDirectorSidebar: React.FC = () => {
     { to: "/director/payments", icon: <FaMoneyBillWave />, label: "Payments" },
     { to: "/director/results", icon: <FaChartBar />, label: "Results" },
     { to: "/director/analytics", icon: <FaChartBar />, label: "Analytics" },
-    { to: "/director/announcements", icon: <FaBullhorn />, label: "Announcements" },
-    { to: "/director/settings", icon: <FaCog />, label: "Settings" },
-    { to: "/director/profile", icon: <FaUserCircle />, label: "Profile" },
+    { to: "/director/announcements", icon: <FaBullhorn />, label: "Announcements" }, 
   ];
 
   return (
