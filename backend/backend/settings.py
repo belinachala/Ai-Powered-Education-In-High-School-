@@ -1,19 +1,23 @@
+# backend/settings.py
+
 import os
 from pathlib import Path
 
+# ------------------------------
 # Base directory
+# ------------------------------
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'your-secret-key'  # Replace with your own secret key
-
-# DEBUG mode (set False in production)
+# ------------------------------
+# Security
+# ------------------------------
+SECRET_KEY = 'django-insecure-change-this-in-production-please!'
 DEBUG = True
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
-# Allowed hosts
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
+# ------------------------------
 # Installed apps
+# ------------------------------
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -21,16 +25,20 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework_simplejwt',
+ 
+    'corsheaders',
+    'users', 
+    'director', 
 
-    'rest_framework',       # Django REST Framework
-    'corsheaders',          # CORS headers
-    'department_heads',     # Department heads app
-    'users',                # Custom users app
 ]
 
+# ------------------------------
 # Middleware
+# ------------------------------
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',            # Must be first
+    'corsheaders.middleware.CorsMiddleware',  # Must be first
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -40,9 +48,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# ------------------------------
+# URLs & templates
+# ------------------------------
 ROOT_URLCONF = 'backend.urls'
 
-# Templates configuration
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -61,7 +71,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'backend.wsgi.application'
 
-# PostgreSQL Database
+# ------------------------------
+# Database - PostgreSQL
+# ------------------------------
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -73,7 +85,9 @@ DATABASES = {
     }
 }
 
+# ------------------------------
 # Password validation
+# ------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -81,50 +95,77 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+# ------------------------------
 # Internationalization
+# ------------------------------
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Africa/Addis_Ababa'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
-STATIC_URL = 'static/'
+# ------------------------------
+# Static & media files
+# ------------------------------
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# ------------------------------
 # Custom user model
+# ------------------------------
 AUTH_USER_MODEL = 'users.CustomUser'
 
-# Django REST Framework configuration
+# ------------------------------
+# REST Framework
+# ------------------------------
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (),  # No authentication required
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.AllowAny',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        # Use session auth for development
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # Allow all by default
+    ],
 }
 
-# CORS configuration
+# ------------------------------
+# CORS - allow your React frontend
+# ------------------------------
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
+CORS_ALLOW_CREDENTIALS = True  # Allow cookies/sessions
+
+# ------------------------------
+# CSRF settings
+# ------------------------------
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
 ]
 
-# Email configuration (optional, only if you plan to use email)
+# Make session and CSRF cookies work in dev
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = False
+
+# ------------------------------
+# Email (optional)
+# ------------------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "yourgmail@gmail.com"         # Replace with your email
-EMAIL_HOST_PASSWORD = "your_app_password"       # Gmail App Password
+EMAIL_HOST_USER = "yourgmail@gmail.com"
+EMAIL_HOST_PASSWORD = "your_app_password"
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_CREDENTIALS = True
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

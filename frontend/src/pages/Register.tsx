@@ -7,13 +7,14 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
+    username: '',          // NEW FIELD
     first_name: '',
     last_name: '',
     phone_number: '',
     email: '',
     password: '',
     confirm_password: '',
-    user_type: '',
+    user_type: 'highschool',
     role: '',
   });
 
@@ -32,12 +33,12 @@ const Register: React.FC = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^[0-9+]{7,15}$/;
 
+    if (!formData.username) return "Username is required.";
     if (!formData.first_name || !formData.last_name) return "First and last name are required.";
     if (!emailRegex.test(formData.email)) return "Invalid email address.";
     if (!phoneRegex.test(formData.phone_number)) return "Invalid phone number.";
     if (formData.password.length < 6) return "Password must be at least 6 characters.";
     if (formData.password !== formData.confirm_password) return "Passwords do not match.";
-    if (!formData.user_type) return "User type is required.";
     if (!formData.role) return "Role is required.";
 
     return null;
@@ -57,17 +58,17 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8001/api/register/"
-, {
+      const response = await fetch("http://127.0.0.1:8001/api/register/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          username: formData.username, // NEW FIELD IN REQUEST
           first_name: formData.first_name,
           last_name: formData.last_name,
           phone_number: formData.phone_number,
           email: formData.email,
           password: formData.password,
-          user_type: formData.user_type,
+          user_type: "highschool",
           role: formData.role,
         }),
       });
@@ -93,15 +94,10 @@ const Register: React.FC = () => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen flex flex-col"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col">
       <Navbar />
 
       <div className="flex flex-col md:flex-row flex-1">
-        {/* Left image */}
         <motion.div
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -116,7 +112,6 @@ const Register: React.FC = () => {
           />
         </motion.div>
 
-        {/* Right form */}
         <motion.div
           initial={{ x: 100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -139,6 +134,20 @@ const Register: React.FC = () => {
                 Create Account
               </motion.h1>
 
+              {/* USERNAME FIELD */}
+              <motion.div variants={fieldVariants}>
+                <label className="block text-gray-700 text-sm font-bold mb-2">Username</label>
+                <input
+                  type="text"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  placeholder="your_username"
+                  className="w-full p-2 rounded border border-gray-300"
+                  required
+                />
+              </motion.div>
+
               <motion.div className="flex flex-col sm:flex-row sm:space-x-4" variants={fieldVariants}>
                 <div className="flex-1 mb-4 sm:mb-0">
                   <label className="block text-gray-700 text-sm font-bold mb-2">First Name</label>
@@ -147,11 +156,11 @@ const Register: React.FC = () => {
                     name="first_name"
                     value={formData.first_name}
                     onChange={handleChange}
-                    placeholder="Abebe"
                     className="w-full p-2 rounded border border-gray-300"
                     required
                   />
                 </div>
+
                 <div className="flex-1">
                   <label className="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
                   <input
@@ -159,7 +168,6 @@ const Register: React.FC = () => {
                     name="last_name"
                     value={formData.last_name}
                     onChange={handleChange}
-                    placeholder="Tefera"
                     className="w-full p-2 rounded border border-gray-300"
                     required
                   />
@@ -173,7 +181,6 @@ const Register: React.FC = () => {
                   name="phone_number"
                   value={formData.phone_number}
                   onChange={handleChange}
-                  placeholder="+251912345678"
                   className="w-full p-2 rounded border border-gray-300"
                   required
                 />
@@ -186,7 +193,6 @@ const Register: React.FC = () => {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="user@example.com"
                   className="w-full p-2 rounded border border-gray-300"
                   required
                 />
@@ -199,7 +205,6 @@ const Register: React.FC = () => {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Password"
                   className="w-full p-2 rounded border border-gray-300"
                   required
                 />
@@ -212,71 +217,37 @@ const Register: React.FC = () => {
                   name="confirm_password"
                   value={formData.confirm_password}
                   onChange={handleChange}
-                  placeholder="Confirm Password"
                   className="w-full p-2 rounded border border-gray-300"
                   required
                 />
               </motion.div>
 
+              <input type="hidden" name="user_type" value="highschool" />
+
               <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">User Type</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2">Role</label>
                 <select
-                  name="user_type"
-                  value={formData.user_type}
+                  name="role"
+                  value={formData.role}
                   onChange={handleChange}
                   className="w-full p-2 rounded border border-gray-300"
                   required
                 >
-                  <option value="">Select User Type</option>
-                  <option value="university">University</option>
-                  <option value="highschool">High School</option>
+                  <option value="">Select Role</option>
+                  <option value="schooldirector">School Director</option>
+                  <option value="teacher">Teacher</option>
+                  <option value="student">Student</option>
                 </select>
               </motion.div>
 
-              {formData.user_type && (
-                <motion.div variants={fieldVariants}>
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Role</label>
-                  <select
-                    name="role"
-                    value={formData.role}
-                    onChange={handleChange}
-                    className="w-full p-2 rounded border border-gray-300"
-                    required
-                  >
-                    <option value="">Select Role</option>
-                    {formData.user_type === 'university' ? (
-                      <>
-                        <option value="departmenthead">Department Head</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="student">Student</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="schooldirector">School Director</option>
-                        <option value="teacher">Teacher</option>
-                        <option value="student">Student</option>
-                      </>
-                    )}
-                  </select>
-                </motion.div>
-              )}
-
               {errorMsg && (
-                <motion.p
-                  className="text-red-600 text-sm font-semibold"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <motion.p className="text-red-600 text-sm font-semibold" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   {errorMsg}
                 </motion.p>
               )}
 
               {successMsg && (
-                <motion.p
-                  className="text-green-600 text-sm font-semibold"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                >
+                <motion.p className="text-green-600 text-sm font-semibold" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   {successMsg}
                 </motion.p>
               )}

@@ -1,10 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { loginUser } from '../api';
 import Navbar from '../components/NavBar';
 
+interface User {
+  username: string;
+  role: string;
+}
+
+interface LoginResponse {
+  success: boolean;
+  message?: string;
+  user?: User;
+}
+
 const Login: React.FC = () => {
-  const [email, setEmail] = useState<string>('');
+  const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -16,37 +26,31 @@ const Login: React.FC = () => {
     setError('');
     setLoading(true);
 
-    const response = await loginUser(email, password);
+    try {
+      const response = await fetch('http://127.0.0.1:8001/api/login/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-    if (response.success && response.user) {
-      // Save user in localStorage
-      localStorage.setItem(
-        'currentUser',
-        JSON.stringify({
-          email: response.user.email,
-          role: response.user.role,
-          user_type: response.user.user_type,
-        })
-      );
+      const data: LoginResponse = await response.json();
 
-      // Redirect based on user_type and role
-      const { role, user_type } = response.user;
+      if (response.ok && data.user) {
+        localStorage.setItem('currentUser', JSON.stringify(data.user));
 
-      if (user_type === 'university') {
-        if (role === 'departmenthead') navigate('/adminprofile');
-        else if (role === 'teacher') navigate('/uni-t-profile');
-        else if (role === 'student') navigate('/uni-s-profile');
-        else navigate('/dashboard');
-      } else if (user_type === 'highschool') {
+        // Redirect by role
+        const { role } = data.user;
         if (role === 'schooldirector') navigate('/directorprofile');
         else if (role === 'teacher') navigate('/h-s-t-profile');
         else if (role === 'student') navigate('/h-s-s-profile');
         else navigate('/dashboard');
       } else {
-        navigate('/dashboard');
+        setError(data.message || 'Invalid username or password');
       }
-    } else {
-      setError(response.message || 'Invalid email or password');
+    } catch (err) {
+      setError('Network error. Please try again.');
     }
 
     setLoading(false);
@@ -67,33 +71,38 @@ const Login: React.FC = () => {
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           />
         </div>
+
         <div className="w-full md:w-1/2 bg-blue p-6 flex items-center justify-center">
           <div className="w-full max-w-md">
             <form className="space-y-6 border-4 border-blue-500 p-6 rounded-lg" onSubmit={handleLogin}>
               <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">Login</h1>
+
               {error && <p className="text-red-500 text-center">{error}</p>}
+
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Email:</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2">Username:</label>
                 <input
-                  type="email"
-                  placeholder="Ex. user@example.com"
+                  type="text"
+                  placeholder="Enter your username"
                   className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:border-purple-500"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   required
                 />
               </div>
+
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Password:</label>
                 <input
                   type="password"
-                  placeholder="Password@example123456"
+                  placeholder="Enter your password"
                   className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:border-purple-500"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
               </div>
+
               <button
                 type="submit"
                 className="w-full bg-purple-700 text-white p-2 rounded mt-4 hover:bg-purple-800 transition"
@@ -101,11 +110,13 @@ const Login: React.FC = () => {
                 {loading ? 'Logging in...' : 'Login'}
               </button>
             </form>
+
             <div className="text-center mt-4">
               <Link to="/forgot-password" className="text-purple-700 hover:underline">
                 Forgot Password?
               </Link>
             </div>
+
             <div className="text-center mt-4">
               <span className="text-gray-700">Don't have an account? </span>
               <Link to="/register" className="text-purple-700 hover:underline">

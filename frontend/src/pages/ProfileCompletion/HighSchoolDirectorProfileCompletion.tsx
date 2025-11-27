@@ -3,51 +3,26 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
-// Ethiopian regions
+// ... (regions and bgImages stay the same!)
+
 const regions = [
-  "Addis Ababa",
-  "Afar",
-  "Amhara",
-  "Benishangul-Gumuz",
-  "Dire Dawa",
-  "Gambela",
-  "Harari",
-  "Oromia",
-  "Sidama",
-  "Somali",
-  "Southern Nations, Nationalities, and Peoples' Region (SNNPR)",
-  "Tigray"
+  "Addis Ababa", "Afar", "Amhara", "Benishangul-Gumuz", "Dire Dawa",
+  "Gambela", "Harari", "Oromia", "Sidama", "Somali",
+  "Southern Nations, Nationalities, and Peoples' Region (SNNPR)", "Tigray"
 ];
 
-// Background images
 const bgImages = [
-  "/assets/gallery-teachers.png",
-  "/assets/gallery-students.png",
-  "/assets/gallery-hero.png",
-  "/assets/features-hero.png",
-  "/assets/brihanunega.png",
-  "/assets/rvu-logoo.png",
+  "/assets/gallery-teachers.png", "/assets/gallery-students.png",
+  "/assets/gallery-hero.png", "/assets/features-hero.png",
+  "/assets/brihanunega.png", "/assets/rvu-logoo.png"
 ];
 
-interface DirectorProfile {
-  first_name: string;
-  last_name: string;
-  gender: string;
-  date_of_birth: string;
-  school_name: string;
-  region: string;
-  city: string;
-  woreda: string;
-  zone: string;
-  years_of_experience: string;
-  profile_picture: File | null;
-  profile_picture_preview: string;
-}
+const API_URL = "http://127.0.0.1:8001/director/profiles/"; // Change if needed
 
-const HighSchoolDirectorProfileCompletion: React.FC = () => {
+const HighSchoolDirectorProfileCompletion = () => {
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState<DirectorProfile>({
+  const [profile, setProfile] = useState({
     first_name: "",
     last_name: "",
     gender: "",
@@ -69,7 +44,6 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
   const [profileProgress, setProfileProgress] = useState(0);
   const [currentBg, setCurrentBg] = useState(0);
 
-  // Background cycling
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % bgImages.length);
@@ -77,7 +51,6 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Profile progress calculation
   useEffect(() => {
     let filled = 0;
     Object.entries(profile).forEach(([key, value]) => {
@@ -92,13 +65,13 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
   }, [profile]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e
   ) => {
     const { name, value } = e.target;
     setProfile({ ...profile, [name]: value });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const preview = URL.createObjectURL(file);
@@ -113,7 +86,7 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
   const validateForm = () => {
     for (let key in profile) {
       if (
-        !profile[key as keyof DirectorProfile] &&
+        !profile[key] &&
         key !== "profile_picture" &&
         key !== "profile_picture_preview"
       ) {
@@ -123,25 +96,54 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
     return null;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setErrorMsg("");
+  setSuccessMsg("");
 
-    const validationError = validateForm();
-    if (validationError) {
-      setErrorMsg(validationError);
+  const validationError = validateForm();
+  if (validationError) {
+    setErrorMsg(validationError);
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const formData = new FormData();
+    for (let key in profile) {
+      if (key === "profile_picture") {
+        if (profile.profile_picture) {
+          formData.append("profile_picture", profile.profile_picture);
+        }
+      } else if (key !== "profile_picture_preview") {
+        formData.append(key, profile[key]);
+      }
+    }
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      let err = await response.json();
+      setErrorMsg(
+        "Save failed: " +
+        (typeof err === "object" ? JSON.stringify(err) : err)
+      );
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccessMsg("Profile completed successfully!");
-      setTimeout(() => navigate("/director"), 1000);
-    }, 1500);
-  };
-
+    setSuccessMsg("Profile completed successfully!");
+    setTimeout(() => navigate("/director"), 1000);
+  } catch (error) {
+    setErrorMsg("Network error or server not reachable");
+    setLoading(false);
+  }
+  setLoading(false);
+};
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gray-100">
       {/* Background */}
@@ -183,7 +185,7 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
           className="relative z-10 bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full"
         >
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
-            🏫  High School Director Profile
+            🏫 High School Director Profile
           </h2>
 
           <div className="mb-4">
@@ -296,9 +298,7 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
                 >
                   <option value="">Select Region</option>
                   {regions.map((r, idx) => (
-                    <option key={idx} value={r}>
-                      {r}
-                    </option>
+                    <option key={idx} value={r}>{r}</option>
                   ))}
                 </select>
               </div>
@@ -328,10 +328,12 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
               </div>
             </div>
 
-           {/* Zone, Woreda, Subcity, Region, Experience */}
+            {/* Zone & Experience */}
             <div className="row">
               <div className="col-md-6 mb-3">
-                <label className="form-label font-semibold">Zone where the school is found</label>
+                <label className="form-label font-semibold">
+                  Zone where the school is found
+                </label>
                 <input
                   type="text"
                   name="zone"
@@ -340,9 +342,10 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
                   className="form-control border-2 border-blue-400"
                 />
               </div>
- 
               <div className="col-md-6 mb-3">
-                <label className="form-label font-semibold">Years of Experience</label>
+                <label className="form-label font-semibold">
+                  Years of Experience
+                </label>
                 <input
                   type="number"
                   min={0}
