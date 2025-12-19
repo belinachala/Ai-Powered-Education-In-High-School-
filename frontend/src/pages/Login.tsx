@@ -1,16 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import axios from 'axios';
 import Navbar from '../components/NavBar';
 
 interface User {
   username: string;
   role: string;
-}
-
-interface LoginResponse {
-  success: boolean;
-  message?: string;
-  user?: User;
+  is_profile_completed: boolean;
 }
 
 const Login: React.FC = () => {
@@ -27,33 +23,52 @@ const Login: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/api/login/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      const response = await axios.post(
+        'http://127.0.0.1:8001/api/users/login/',
+        { username, password },
+        {
+          withCredentials: true, // session cookies
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
-      const data: LoginResponse = await response.json();
+      const user: User = response.data.user;
 
-      if (response.ok && data.user) {
-        localStorage.setItem('currentUser', JSON.stringify(data.user));
+      // Save user info in localStorage if needed
+      localStorage.setItem('currentUser', JSON.stringify(user));
 
-        // Redirect by role
-        const { role } = data.user;
-        if (role === 'schooldirector') navigate('/directorprofile');
-        else if (role === 'teacher') navigate('/h-s-t-profile');
-        else if (role === 'student') navigate('/h-s-s-profile');
-        else navigate('/dashboard');
+      // Role-based redirection with profile completion check
+      if (user.role === 'schooldirector') {
+        if (!user.is_profile_completed) {
+          navigate('/directorprofile'); // profile not complete
+        } else {
+          navigate('/director'); // profile completed
+        }
+      } else if (user.role === 'teacher') {
+        if (!user.is_profile_completed) {
+          navigate('/h-s-t-profile'); // profile not complete
+        } else {
+          navigate('/h-s-teacher/dashboard'); // profile completed
+        }
+      } else if (user.role === 'student') {
+        if (!user.is_profile_completed) {
+          navigate('/h-s-s-profile'); // profile not complete
+        } else {
+          navigate('/h-s-student/dashboard'); // profile completed
+        }
       } else {
-        setError(data.message || 'Invalid username or password');
+        navigate('/dashboard'); // fallback
       }
-    } catch (err) {
-      setError('Network error. Please try again.');
-    }
 
-    setLoading(false);
+    } catch (err: any) {
+      if (err.response?.data?.error) {
+        setError(err.response.data.error.username || err.response.data.error);
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -74,13 +89,20 @@ const Login: React.FC = () => {
 
         <div className="w-full md:w-1/2 bg-blue p-6 flex items-center justify-center">
           <div className="w-full max-w-md">
-            <form className="space-y-6 border-4 border-blue-500 p-6 rounded-lg" onSubmit={handleLogin}>
-              <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">Login</h1>
+            <form
+              className="space-y-6 border-4 border-blue-500 p-6 rounded-lg"
+              onSubmit={handleLogin}
+            >
+              <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">
+                Login
+              </h1>
 
               {error && <p className="text-red-500 text-center">{error}</p>}
 
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Username:</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Username:
+                </label>
                 <input
                   type="text"
                   placeholder="Enter your username"
@@ -92,7 +114,9 @@ const Login: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Password:</label>
+                <label className="block text-gray-700 text-sm font-bold mb-2">
+                  Password:
+                </label>
                 <input
                   type="password"
                   placeholder="Enter your password"
@@ -106,6 +130,7 @@ const Login: React.FC = () => {
               <button
                 type="submit"
                 className="w-full bg-purple-700 text-white p-2 rounded mt-4 hover:bg-purple-800 transition"
+                disabled={loading}
               >
                 {loading ? 'Logging in...' : 'Login'}
               </button>

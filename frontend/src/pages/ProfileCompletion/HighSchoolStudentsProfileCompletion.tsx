@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -29,15 +30,29 @@ const bgImages = [
   "/assets/rvu-logoo.png",
 ];
 
+// Helper to get CSRF token
+function getCookie(name: string) {
+  let cookieValue: string | null = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let cookie of cookies) {
+      const [key, value] = cookie.trim().split("=");
+      if (key === name) {
+        cookieValue = decodeURIComponent(value);
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
 interface StudentProfile {
-  first_name: string;
-  last_name: string;
   gender: string;
   date_of_birth: string;
   school_name: string;
   region: string;
-  zone: string; // Added zone
-  city: string;
+  zone: string;
+  subcity: string;
   woreda: string;
   grade_level: string;
   student_id: string;
@@ -49,14 +64,12 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<StudentProfile>({
-    first_name: "",
-    last_name: "",
     gender: "",
     date_of_birth: "",
     school_name: "",
     region: "",
-    zone: "", // Added zone
-    city: "",
+    zone: "",
+    subcity: "",
     woreda: "",
     grade_level: "",
     student_id: "",
@@ -64,14 +77,14 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
     profile_picture_preview: "",
   });
 
-  const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [profileProgress, setProfileProgress] = useState(0);
   const [currentBg, setCurrentBg] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Background animation
+  // Background carousel
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBg((prev) => (prev + 1) % bgImages.length);
@@ -81,16 +94,22 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
 
   // Profile completion progress
   useEffect(() => {
-    let filled = 0;
-    Object.entries(profile).forEach(([key, value]) => {
-      if (value && key !== "profile_picture" && key !== "profile_picture_preview") filled += 1;
-    });
-    setProfileProgress(Math.round((filled / 11) * 100)); // 11 fields now
+    const fields = [
+      "gender",
+      "date_of_birth",
+      "school_name",
+      "region",
+      "zone",
+      "subcity",
+      "woreda",
+      "grade_level",
+      "student_id",
+    ];
+    let filled = fields.filter((f) => profile[f as keyof StudentProfile]).length;
+    setProfileProgress(Math.round((filled / fields.length) * 100));
   }, [profile]);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setProfile({ ...profile, [name]: value });
   };
@@ -104,15 +123,26 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
   };
 
   const validateForm = () => {
-    for (let key in profile) {
-      if (!profile[key as keyof StudentProfile] && key !== "profile_picture" && key !== "profile_picture_preview") {
-        return `${key.replace("_", " ")} is required`;
+    const requiredFields = [
+      "gender",
+      "date_of_birth",
+      "school_name",
+      "region",
+      "zone",
+      "subcity",
+      "woreda",
+      "grade_level",
+      "student_id",
+    ];
+    for (let field of requiredFields) {
+      if (!profile[field as keyof StudentProfile]) {
+        return `${field.replace("_", " ")} is required`;
       }
     }
     return null;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
@@ -124,16 +154,41 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
     }
 
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      const formData = new FormData();
+      Object.entries(profile).forEach(([key, value]) => {
+        if (value) formData.append(key, value as any);
+      });
+
+      const csrfToken = getCookie("csrftoken");
+
+     await axios.post(
+        "http://localhost:8001/api/users/profile-completion/",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            "X-CSRFToken": csrfToken
+          },
+          withCredentials: true // required for session auth
+        }
+      );
+
+
       setSuccessMsg("Profile completed successfully!");
       setTimeout(() => navigate("/h-s-student/dashboard"), 1000);
-    }, 1500);
+    } catch (err: any) {
+      if (err.response?.data?.error) setErrorMsg(JSON.stringify(err.response.data.error));
+      else if (err.response?.data?.detail) setErrorMsg(err.response.data.detail);
+      else setErrorMsg("Failed to complete profile. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden bg-gray-100">
-      {/* Background Animation */}
       <AnimatePresence>
         <motion.img
           key={currentBg}
@@ -147,7 +202,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
         />
       </AnimatePresence>
 
-      {/* Center Button */}
       {!showForm && (
         <motion.button
           initial={{ scale: 0 }}
@@ -161,11 +215,9 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
           onClick={() => setShowForm(true)}
         >
           Complete Your Profile
-          <span className="absolute top-0 left-0 w-full h-full rounded-full border-2 border-white opacity-20 animate-pulse"></span>
         </motion.button>
       )}
 
-      {/* Profile Form */}
       {showForm && (
         <motion.div
           initial={{ opacity: 0, y: 50 }}
@@ -174,7 +226,7 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
           className="relative z-10 bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full"
         >
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">
-             🏫 High School Student Profile
+            🏫 High School Student Profile
           </h2>
 
           <div className="mb-4">
@@ -214,38 +266,16 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
               />
             </div>
 
-            {/* First Name & Last Name */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">First Name</label>
-                <input
-                  type="text"
-                  name="first_name"
-                  value={profile.first_name}
-                  onChange={handleChange}
-                  className="form-control border-2 border-purple-400"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Last Name</label>
-                <input
-                  type="text"
-                  name="last_name"
-                  value={profile.last_name}
-                  onChange={handleChange}
-                  className="form-control border-2 border-pink-400"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Student ID</label>
-                <input
-                  type="text"
-                  name="student_id"
-                  value={profile.student_id}
-                  onChange={handleChange}
-                  className="form-control border-2 border-purple-400"
-                />
-              </div>
+            {/* Student ID */}
+            <div>
+              <label className="form-label font-semibold">Student ID</label>
+              <input
+                type="text"
+                name="student_id"
+                value={profile.student_id}
+                onChange={handleChange}
+                className="form-control border-2 border-purple-400"
+              />
             </div>
 
             {/* Gender & DOB */}
@@ -275,7 +305,7 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
               </div>
             </div>
 
-            {/* School Name & Region */}
+            {/* School & Region */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">School Name</label>
@@ -297,23 +327,34 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
                 >
                   <option value="">Select Region</option>
                   {regions.map((r, idx) => (
-                    <option key={idx} value={r}>{r}</option>
+                    <option key={idx} value={r}>
+                      {r}
+                    </option>
                   ))}
                 </select>
               </div>
             </div>
 
-          
-            {/* City & Woreda */}
+            {/* Zone & Subcity & Woreda */}
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="form-label font-semibold">City</label>
+                <label className="form-label font-semibold">Zone</label>
                 <input
                   type="text"
-                  name="city"
-                  value={profile.city}
+                  name="zone"
+                  value={profile.zone}
                   onChange={handleChange}
                   className="form-control border-2 border-blue-400"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="form-label font-semibold">Subcity</label>
+                <input
+                  type="text"
+                  name="subcity"
+                  value={profile.subcity}
+                  onChange={handleChange}
+                  className="form-control border-2 border-purple-400"
                 />
               </div>
               <div className="flex-1">
@@ -323,40 +364,26 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
                   name="woreda"
                   value={profile.woreda}
                   onChange={handleChange}
-                  className="form-control border-2 border-purple-400"
+                  className="form-control border-2 border-blue-400"
                 />
               </div>
             </div>
 
-            {/* Grade & Student ID */}
-            <div className="flex gap-4">
-                {/* Zone */}
-            <div className="mt-2">
-              <label className="form-label font-semibold">Zone where the school is found</label>
-              <input
-                type="text"
-                name="zone"
-                value={profile.zone}
+            {/* Grade */}
+            <div>
+              <label className="form-label font-semibold">Grade Level</label>
+              <select
+                name="grade_level"
+                value={profile.grade_level}
                 onChange={handleChange}
-                className="form-control border-2 border-blue-400"
-              />
-            </div>
-
-              <div className="flex-1">
-                <label className="form-label font-semibold">Grade Level</label>
-                <select
-                  name="grade_level"
-                  value={profile.grade_level}
-                  onChange={handleChange}
-                  className="form-select border-2 border-blue-400"
-                >
-                  <option value="">Select Grade</option>
-                  <option value="9">Grade 9</option>
-                  <option value="10">Grade 10</option>
-                  <option value="11">Grade 11</option>
-                  <option value="12">Grade 12</option>
-                </select>
-              </div>
+                className="form-select border-2 border-blue-400"
+              >
+                <option value="">Select Grade</option>
+                <option value="9">Grade 9</option>
+                <option value="10">Grade 10</option>
+                <option value="11">Grade 11</option>
+                <option value="12">Grade 12</option>
+              </select>
             </div>
 
             <button

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import React, { useState } from 'react';
 import Navbar from '@/components/NavBar';
 import { Link, useNavigate } from 'react-router-dom';
@@ -7,15 +8,14 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    username: '',          // NEW FIELD
+    username: '',
     first_name: '',
     last_name: '',
     phone_number: '',
     email: '',
     password: '',
     confirm_password: '',
-    user_type: 'highschool',
-    role: '',
+    role: '', // schooldirector / teacher / student
   });
 
   const [loading, setLoading] = useState(false);
@@ -23,10 +23,7 @@ const Register: React.FC = () => {
   const [successMsg, setSuccessMsg] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const validateForm = () => {
@@ -58,31 +55,35 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8001/api/register/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: formData.username, // NEW FIELD IN REQUEST
+      const response = await axios.post(
+        'http://127.0.0.1:8001/api/users/register/',
+        {
+          username: formData.username,
           first_name: formData.first_name,
           last_name: formData.last_name,
           phone_number: formData.phone_number,
           email: formData.email,
           password: formData.password,
-          user_type: "highschool",
+          confirm_password: formData.confirm_password,
           role: formData.role,
-        }),
-      });
+        },
+        {
+          withCredentials: true,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
 
-      if (response.ok) {
-        setSuccessMsg("Registration successful!");
-        setTimeout(() => navigate("/login"), 1500);
+      setSuccessMsg('Registration successful!');
+      setTimeout(() => navigate('/login'), 1000);
+    } catch (error: any) {
+      // Show backend validation errors
+      if (error.response?.data?.errors) {
+        const backendErrors = error.response.data.errors;
+        const messages = Object.values(backendErrors).flat().join(' ');
+        setErrorMsg(messages);
       } else {
-        const data = await response.json();
-        const errors = Object.values(data).flat().join(" ");
-        setErrorMsg(errors || "Registration failed. Please try again.");
+        setErrorMsg('Registration failed. Please try again.');
       }
-    } catch {
-      setErrorMsg("Network error. Please check your backend server.");
     } finally {
       setLoading(false);
     }
@@ -96,7 +97,6 @@ const Register: React.FC = () => {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col">
       <Navbar />
-
       <div className="flex flex-col md:flex-row flex-1">
         <motion.div
           initial={{ x: -100, opacity: 0 }}
@@ -107,7 +107,7 @@ const Register: React.FC = () => {
           <img
             src="/assets/rvu-logoo1.png"
             alt="Logo"
-            className="w-full bg-blue-900 flex items-center justify-center relative p-4"
+            className="w-full"
             onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
           />
         </motion.div>
@@ -134,7 +134,7 @@ const Register: React.FC = () => {
                 Create Account
               </motion.h1>
 
-              {/* USERNAME FIELD */}
+              {/* Username */}
               <motion.div variants={fieldVariants}>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Username</label>
                 <input
@@ -142,12 +142,12 @@ const Register: React.FC = () => {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  placeholder="your_username"
                   className="w-full p-2 rounded border border-gray-300"
                   required
                 />
               </motion.div>
 
+              {/* First & Last Name */}
               <motion.div className="flex flex-col sm:flex-row sm:space-x-4" variants={fieldVariants}>
                 <div className="flex-1 mb-4 sm:mb-0">
                   <label className="block text-gray-700 text-sm font-bold mb-2">First Name</label>
@@ -160,7 +160,6 @@ const Register: React.FC = () => {
                     required
                   />
                 </div>
-
                 <div className="flex-1">
                   <label className="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
                   <input
@@ -174,6 +173,7 @@ const Register: React.FC = () => {
                 </div>
               </motion.div>
 
+              {/* Phone Number */}
               <motion.div variants={fieldVariants}>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Phone Number</label>
                 <input
@@ -186,6 +186,7 @@ const Register: React.FC = () => {
                 />
               </motion.div>
 
+              {/* Email */}
               <motion.div variants={fieldVariants}>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
                 <input
@@ -198,6 +199,7 @@ const Register: React.FC = () => {
                 />
               </motion.div>
 
+              {/* Password */}
               <motion.div variants={fieldVariants}>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Password</label>
                 <input
@@ -210,6 +212,7 @@ const Register: React.FC = () => {
                 />
               </motion.div>
 
+              {/* Confirm Password */}
               <motion.div variants={fieldVariants}>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Confirm Password</label>
                 <input
@@ -222,8 +225,7 @@ const Register: React.FC = () => {
                 />
               </motion.div>
 
-              <input type="hidden" name="user_type" value="highschool" />
-
+              {/* Role */}
               <motion.div variants={fieldVariants}>
                 <label className="block text-gray-700 text-sm font-bold mb-2">Role</label>
                 <select
@@ -240,18 +242,11 @@ const Register: React.FC = () => {
                 </select>
               </motion.div>
 
-              {errorMsg && (
-                <motion.p className="text-red-600 text-sm font-semibold" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  {errorMsg}
-                </motion.p>
-              )}
+              {/* Error / Success Messages */}
+              {errorMsg && <motion.p className="text-red-600 text-sm font-semibold">{errorMsg}</motion.p>}
+              {successMsg && <motion.p className="text-green-600 text-sm font-semibold">{successMsg}</motion.p>}
 
-              {successMsg && (
-                <motion.p className="text-green-600 text-sm font-semibold" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  {successMsg}
-                </motion.p>
-              )}
-
+              {/* Submit Button */}
               <motion.button
                 type="submit"
                 disabled={loading}
@@ -265,9 +260,7 @@ const Register: React.FC = () => {
 
             <div className="text-center mt-4">
               <span className="text-gray-700">Already have an account? </span>
-              <Link to="/login" className="text-purple-700 hover:underline">
-                Go to Login
-              </Link>
+              <Link to="/login" className="text-purple-700 hover:underline">Go to Login</Link>
             </div>
           </div>
         </motion.div>
