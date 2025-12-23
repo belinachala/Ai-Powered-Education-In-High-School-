@@ -1,29 +1,25 @@
-# app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.core.config import settings
-from app.routes import auth, users
+from app.api import auth, directors
 
-# Create FastAPI app
-app = FastAPI(
-    title=settings.APP_NAME,
-    debug=settings.DEBUG
-)
+app = FastAPI(title="School Management API")
 
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.FRONTEND_URL],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
-app.include_router(users.router, prefix="/api/users", tags=["Users"])
+app.include_router(auth.router)
+app.include_router(directors.router)
+
 
 @app.get("/")
-async def root():
-    return {"message": "High School Management API is running."}
+def root():
+    return {"message": "School Management API is running"}

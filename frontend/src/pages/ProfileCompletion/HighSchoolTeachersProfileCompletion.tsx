@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import Select from "react-select";
 import "bootstrap/dist/css/bootstrap.min.css";
 
@@ -43,25 +41,7 @@ const gradeOptions = [
   { value: "12", label: "Grade 12" },
 ];
 
-// Helper to get CSRF token
-function getCookie(name: string) {
-  let cookieValue: string | null = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-      const [key, value] = cookie.trim().split("=");
-      if (key === name) {
-        cookieValue = decodeURIComponent(value);
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
 const HighSchoolTeachersProfileCompletion: React.FC = () => {
-  const navigate = useNavigate();
-
   const [profile, setProfile] = useState<any>({
     teacher_id: "",
     gender: "",
@@ -122,18 +102,18 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
     }
   };
 
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Frontend-only form submission
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
-    // Validate required fields
     const requiredFields = [
       "teacher_id", "gender", "date_of_birth", "school_name",
       "region", "subcity", "woreda", "zone", "years_of_experience",
       "subjects_taught", "grade_levels"
     ];
+
     for (let field of requiredFields) {
       if (!profile[field] || (Array.isArray(profile[field]) && profile[field].length === 0)) {
         setErrorMsg(`${field.replace("_", " ")} is required`);
@@ -142,37 +122,12 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
     }
 
     setLoading(true);
-
-    try {
-      const formData = new FormData();
-      Object.entries(profile).forEach(([key, value]) => {
-        if (value) formData.append(key, value instanceof File ? value : value.toString());
-      });
-
-      const csrfToken = getCookie("csrftoken");
-
-      await axios.post(
-        "http://localhost:8001/api/users/profile-completion/",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "X-CSRFToken": csrfToken
-          },
-          withCredentials: true
-        }
-      );
-
+    // Simulate saving profile
+    setTimeout(() => {
       setSuccessMsg("Profile completed successfully!");
-      setTimeout(() => navigate("/h-s-teacher/dashboard"), 1000);
-
-    } catch (err: any) {
-      if (err.response?.data?.error) setErrorMsg(JSON.stringify(err.response.data.error));
-      else if (err.response?.data?.detail) setErrorMsg(err.response.data.detail);
-      else setErrorMsg("Failed to complete profile. Please try again.");
-    } finally {
+      localStorage.setItem("highSchoolTeacherProfile", JSON.stringify(profile));
       setLoading(false);
-    }
+    }, 1000);
   };
 
   return (

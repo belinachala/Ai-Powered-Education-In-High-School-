@@ -1,71 +1,87 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
-import Navbar from '../components/NavBar';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import Navbar from "@/components/NavBar";
+import axios from "axios";
 
-interface User {
+interface LoginResponse {
   username: string;
   role: string;
-  is_profile_completed: boolean;
+  access_token: string;
+  token_type: string;
 }
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [error, setError] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
+    if (!username.trim() || !password) {
+      setError("Username and password are required.");
+      setLoading(false);
+      return;
+    }
+
     try {
-      const response = await axios.post(
-        'http://127.0.0.1:8001/api/users/login/',
-        { username, password },
-        {
-          withCredentials: true, // session cookies
-          headers: { 'Content-Type': 'application/json' },
-        }
+      const response = await axios.post<LoginResponse>(
+        "http://127.0.0.1:8000/auth/login",
+        { username: username.trim(), password }
       );
 
-      const user: User = response.data.user;
+      const user = response.data;
 
-      // Save user info in localStorage if needed
-      localStorage.setItem('currentUser', JSON.stringify(user));
+      // Store JWT token and basic user info
+      localStorage.setItem("token", user.access_token);
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify({ username: user.username, role: user.role })
+      );
 
-      // Role-based redirection with profile completion check
-      if (user.role === 'schooldirector') {
-        if (!user.is_profile_completed) {
-          navigate('/directorprofile'); // profile not complete
-        } else {
-          navigate('/director'); // profile completed
+      // Special handling for school directors
+     if (user.role === "schooldirector") {
+  try {
+    // Fetch director profile using token
+    const profileCheck = await axios.get(
+      "http://127.0.0.1:8000/directors/me/profile",
+      {
+        headers: {
+          Authorization: `Bearer ${response.data.access_token}`
         }
-      } else if (user.role === 'teacher') {
-        if (!user.is_profile_completed) {
-          navigate('/h-s-t-profile'); // profile not complete
-        } else {
-          navigate('/h-s-teacher/dashboard'); // profile completed
-        }
-      } else if (user.role === 'student') {
-        if (!user.is_profile_completed) {
-          navigate('/h-s-s-profile'); // profile not complete
-        } else {
-          navigate('/h-s-student/dashboard'); // profile completed
-        }
-      } else {
-        navigate('/dashboard'); // fallback
       }
+    );
 
+    // If profile exists (director_id filled) → dashboard
+    if (profileCheck.data.director_id) {
+      navigate("/director");
+    } else {
+      // Else → profile completion
+      navigate("/directorprofile");
+    }
+  } catch (profileError: any) {
+    // If 401, 403, or other error → go to profile completion
+    navigate("/directorprofile");
+  }
+}
+
+      // Other roles
+      else if (user.role === "teacher") {
+        navigate("/h-s-teacher/dashboard");
+      } else if (user.role === "student") {
+        navigate("/h-s-student/dashboard");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (err: any) {
-      if (err.response?.data?.error) {
-        setError(err.response.data.error.username || err.response.data.error);
-      } else {
-        setError('Login failed. Please check your credentials.');
-      }
+      setError(
+        err.response?.data?.detail ||
+          "Invalid username or password. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -77,17 +93,17 @@ const Login: React.FC = () => {
       <div className="flex flex-col md:flex-row">
         <div
           className="w-full md:w-3/5 bg-[#a2d9e4] flex items-center justify-center relative"
-          style={{ minHeight: 'calc(100vh - 88px)' }}
+          style={{ minHeight: "calc(100vh - 88px)" }}
         >
           <img
             src="/assets/rvu-logoo1.png"
             alt="RVU Logo"
             className="w-full h-3/4 object-contain"
-            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+            onError={(e) => ((e.target as HTMLImageElement).style.display = "none")}
           />
         </div>
 
-        <div className="w-full md:w-1/2 bg-blue p-6 flex items-center justify-center">
+        <div className="w-full md:w-1/2 bg-white p-6 flex items-center justify-center">
           <div className="w-full max-w-md">
             <form
               className="space-y-6 border-4 border-blue-500 p-6 rounded-lg"
@@ -97,16 +113,20 @@ const Login: React.FC = () => {
                 Login
               </h1>
 
-              {error && <p className="text-red-500 text-center">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-center font-medium bg-red-50 p-3 rounded">
+                  {error}
+                </p>
+              )}
 
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Username:
+                  Username
                 </label>
                 <input
                   type="text"
                   placeholder="Enter your username"
-                  className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:border-purple-500"
+                  className="w-full p-3 rounded border-2 border-gray-300 focus:border-purple-500 focus:outline-none transition"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -115,12 +135,12 @@ const Login: React.FC = () => {
 
               <div>
                 <label className="block text-gray-700 text-sm font-bold mb-2">
-                  Password:
+                  Password
                 </label>
                 <input
                   type="password"
                   placeholder="Enter your password"
-                  className="w-full p-2 rounded border border-gray-300 focus:outline-none focus:border-purple-500"
+                  className="w-full p-3 rounded border-2 border-gray-300 focus:border-purple-500 focus:outline-none transition"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -129,24 +149,23 @@ const Login: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full bg-purple-700 text-white p-2 rounded mt-4 hover:bg-purple-800 transition"
                 disabled={loading}
+                className="w-full bg-purple-700 hover:bg-purple-800 text-white font-bold py-3 rounded-lg transition transform hover:scale-105 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {loading ? 'Logging in...' : 'Login'}
+                {loading ? "Logging in..." : "Login"}
               </button>
             </form>
 
-            <div className="text-center mt-4">
-              <Link to="/forgot-password" className="text-purple-700 hover:underline">
+            <div className="text-center mt-6 space-y-3">
+              <Link to="/forgot-password" className="text-purple-700 hover:underline text-sm">
                 Forgot Password?
               </Link>
-            </div>
-
-            <div className="text-center mt-4">
-              <span className="text-gray-700">Don't have an account? </span>
-              <Link to="/register" className="text-purple-700 hover:underline">
-                Go to Create Account
-              </Link>
+              <div>
+                <span className="text-gray-600">Don't have an account? </span>
+                <Link to="/register" className="text-purple-700 font-semibold hover:underline">
+                  Create Account
+                </Link>
+              </div>
             </div>
           </div>
         </div>

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import "bootstrap/dist/css/bootstrap.min.css";
 
 // Regions list
 const regions = [
@@ -18,24 +17,10 @@ const bgImages = [
   "/assets/brihanunega.png", "/assets/rvu-logoo.png"
 ];
 
-// Helper to get CSRF token from cookies
-function getCookie(name: string) {
-  let cookieValue: string | null = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-      const [key, value] = cookie.trim().split("=");
-      if (key === name) {
-        cookieValue = decodeURIComponent(value);
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
+const HighSchoolDirectorProfileCompletion: React.FC = () => {
+  const navigate = useNavigate();
 
-const HighSchoolDirectorProfileCompletion = () => {
-  const [profile, setProfile] = useState<any>({
+  const [profile, setProfile] = useState({
     director_id: "",
     gender: "",
     date_of_birth: "",
@@ -45,7 +30,7 @@ const HighSchoolDirectorProfileCompletion = () => {
     woreda: "",
     zone: "",
     years_of_experience: "",
-    profile_picture: null,
+    profile_picture: null as File | null,
     profile_picture_preview: "",
   });
 
@@ -55,8 +40,31 @@ const HighSchoolDirectorProfileCompletion = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
 
-  const navigate = useNavigate();
+  // Load token and verify user
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (!storedToken) {
+      navigate("/login"); // Redirect if no token
+      return;
+    }
+    setToken(storedToken);
+
+    // Optional: check if profile is already completed
+    axios.get("http://127.0.0.1:8000/directors/me/profile", {
+      headers: { Authorization: `Bearer ${storedToken}` }
+    }).then(res => {
+      if (res.data?.director_id) {
+        navigate("/director"); // Profile already completed → redirect
+      }
+    }).catch(err => {
+      // Unauthorized → stay on this page
+      if (err.response?.status !== 401) {
+        console.log(err);
+      }
+    });
+  }, [navigate]);
 
   // Background carousel
   useEffect(() => {
@@ -69,35 +77,42 @@ const HighSchoolDirectorProfileCompletion = () => {
   // Calculate profile completion progress
   useEffect(() => {
     const fields = ["director_id", "gender", "date_of_birth", "school_name", "region", "subcity", "woreda", "zone", "years_of_experience"];
-    let filled = fields.filter(f => profile[f]).length;
+    const filled = fields.filter(f => profile[f as keyof typeof profile]).length;
     setProfileProgress(Math.round((filled / fields.length) * 100));
   }, [profile]);
 
-  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
+    setProfile(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const preview = URL.createObjectURL(file);
-      setProfile({ ...profile, profile_picture: file, profile_picture_preview: preview });
+      setProfile(prev => ({
+        ...prev,
+        profile_picture: file,
+        profile_picture_preview: preview,
+      }));
     }
   };
 
-  // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
+    if (!token) {
+      setErrorMsg("Please log in first to complete your profile.");
+      navigate("/login");
+      return;
+    }
+
     // Required fields validation
     const requiredFields = ["director_id", "gender", "date_of_birth", "school_name", "region", "subcity", "woreda", "zone", "years_of_experience"];
-    for (let field of requiredFields) {
-      if (!profile[field]) {
+    for (const field of requiredFields) {
+      if (!profile[field as keyof typeof profile]) {
         setErrorMsg(`${field.replace("_", " ")} is required`);
         return;
       }
@@ -107,31 +122,34 @@ const HighSchoolDirectorProfileCompletion = () => {
 
     try {
       const formData = new FormData();
-      Object.entries(profile).forEach(([key, value]) => {
-        if (value) formData.append(key, value);
+      Object.keys(profile).forEach(key => {
+        if (key === "profile_picture" && profile.profile_picture) {
+          formData.append("profile_picture", profile.profile_picture);
+        } else if (key !== "profile_picture" && key !== "profile_picture_preview") {
+          formData.append(key, profile[key as keyof typeof profile].toString());
+        }
       });
 
-      const csrfToken = getCookie("csrftoken"); // Get CSRF token from cookie
-
-      await axios.post(
-        "http://localhost:8001/api/users/profile-completion/",
+      await axios.patch(
+        "http://127.0.0.1:8000/directors/me/profile",
         formData,
         {
           headers: {
+            Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
-            "X-CSRFToken": csrfToken
           },
-          withCredentials: true // required for session auth
         }
       );
 
       setSuccessMsg("Profile completed successfully!");
-      setTimeout(() => navigate("/director"), 1000);
+      localStorage.setItem("directorProfile", JSON.stringify(profile));
+
+      setTimeout(() => navigate("/director"), 1500);
 
     } catch (err: any) {
-      if (err.response?.data?.error) setErrorMsg(JSON.stringify(err.response.data.error));
-      else if (err.response?.data?.detail) setErrorMsg(err.response.data.detail);
-      else setErrorMsg("Failed to complete profile. Please try again.");
+      setErrorMsg(
+        err.response?.data?.detail || "Failed to save profile. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -187,59 +205,90 @@ const HighSchoolDirectorProfileCompletion = () => {
             <p className="text-right text-sm text-gray-700 mt-1">{profileProgress}% completed</p>
           </div>
 
-          {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-          {successMsg && <div className="alert alert-success">{successMsg}</div>}
+          {errorMsg && <p className="text-red-600 text-center font-semibold mb-4">{errorMsg}</p>}
+          {successMsg && <p className="text-green-600 text-center font-semibold mb-4">{successMsg}</p>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Profile Picture */}
             <div className="text-center mb-4">
               {profile.profile_picture_preview ? (
-                <img src={profile.profile_picture_preview} alt="profile preview" className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-blue-500" />
+                <img
+                  src={profile.profile_picture_preview}
+                  alt="profile preview"
+                  className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-blue-500"
+                />
               ) : (
                 <div className="w-28 h-28 rounded-full mx-auto bg-gray-200 flex items-center justify-center border-4 border-blue-500">
                   <span className="text-gray-500">No Image</span>
                 </div>
               )}
-              <input type="file" accept="image/*" onChange={handleFileChange} className="form-control mt-2" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+              />
             </div>
 
             {/* Director ID */}
             <div>
-              <label className="form-label font-semibold">Director ID</label>
+              <label className="block text-gray-700 font-semibold mb-2">Director ID</label>
               <input
                 type="text"
                 name="director_id"
                 value={profile.director_id}
                 onChange={handleChange}
-                className="form-control border-2 border-purple-400"
+                className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
               />
             </div>
 
             {/* Gender & DOB */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">Gender</label>
-                <select name="gender" value={profile.gender} onChange={handleChange} className="form-select border-2 border-blue-400">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Gender</label>
+                <select
+                  name="gender"
+                  value={profile.gender}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
+                >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                 </select>
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Date of Birth</label>
-                <input type="date" name="date_of_birth" value={profile.date_of_birth} onChange={handleChange} className="form-control border-2 border-purple-300" />
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Date of Birth</label>
+                <input
+                  type="date"
+                  name="date_of_birth"
+                  value={profile.date_of_birth}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-600"
+                />
               </div>
             </div>
 
             {/* School Name & Region */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">School Name</label>
-                <input type="text" name="school_name" value={profile.school_name} onChange={handleChange} className="form-control border-2 border-purple-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">School Name</label>
+                <input
+                  type="text"
+                  name="school_name"
+                  value={profile.school_name}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
+                />
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Region</label>
-                <select name="region" value={profile.region} onChange={handleChange} className="form-select border-2 border-pink-400">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Region</label>
+                <select
+                  name="region"
+                  value={profile.region}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-pink-400 rounded-lg focus:outline-none focus:border-pink-600"
+                >
                   <option value="">Select Region</option>
                   {regions.map((r, idx) => (
                     <option key={idx} value={r}>{r}</option>
@@ -249,30 +298,61 @@ const HighSchoolDirectorProfileCompletion = () => {
             </div>
 
             {/* Subcity & Woreda */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">Subcity</label>
-                <input type="text" name="subcity" value={profile.subcity} onChange={handleChange} className="form-control border-2 border-blue-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Subcity</label>
+                <input
+                  type="text"
+                  name="subcity"
+                  value={profile.subcity}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
+                />
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Woreda</label>
-                <input type="text" name="woreda" value={profile.woreda} onChange={handleChange} className="form-control border-2 border-purple-400" />
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Woreda</label>
+                <input
+                  type="text"
+                  name="woreda"
+                  value={profile.woreda}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
+                />
               </div>
             </div>
 
             {/* Zone & Experience */}
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">Zone where the school is found</label>
-                <input type="text" name="zone" value={profile.zone} onChange={handleChange} className="form-control border-2 border-blue-400" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Zone where the school is found</label>
+                <input
+                  type="text"
+                  name="zone"
+                  value={profile.zone}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
+                />
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Years of Experience</label>
-                <input type="number" min={0} name="years_of_experience" value={profile.years_of_experience} onChange={handleChange} className="form-control border-2 border-purple-400" />
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Years of Experience</label>
+                <input
+                  type="number"
+                  min="0"
+                  name="years_of_experience"
+                  value={profile.years_of_experience}
+                  onChange={handleChange}
+                  className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
+                />
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className="btn w-full mt-4 text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:scale-105 transition-transform">
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full mt-6 py-3 text-white font-bold rounded-lg transition-all transform hover:scale-105 ${
+                loading ? "bg-gray-400 cursor-not-allowed" : "bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
+              }`}
+            >
               {loading ? "Saving..." : "Complete Profile"}
             </button>
           </form>

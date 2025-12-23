@@ -1,50 +1,68 @@
-import axios from 'axios';
-import React, { useState } from 'react';
-import Navbar from '@/components/NavBar';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import axios from "axios";
+import Navbar from "@/components/NavBar";
+
+interface RegisterFormData {
+  username: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  email: string;
+  password: string;
+  confirm_password: string;
+  role: string;
+}
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    username: '',
-    first_name: '',
-    last_name: '',
-    phone_number: '',
-    email: '',
-    password: '',
-    confirm_password: '',
-    role: '', // schooldirector / teacher / student
+  const [formData, setFormData] = useState<RegisterFormData>({
+    username: "",
+    first_name: "",
+    last_name: "",
+    phone_number: "",
+    email: "",
+    password: "",
+    confirm_password: "",
+    role: "",
   });
 
   const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrorMsg(""); // Clear error when user starts typing
   };
 
-  const validateForm = () => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[0-9+]{7,15}$/;
-
-    if (!formData.username) return "Username is required.";
-    if (!formData.first_name || !formData.last_name) return "First and last name are required.";
-    if (!emailRegex.test(formData.email)) return "Invalid email address.";
-    if (!phoneRegex.test(formData.phone_number)) return "Invalid phone number.";
-    if (formData.password.length < 6) return "Password must be at least 6 characters.";
-    if (formData.password !== formData.confirm_password) return "Passwords do not match.";
+  const validateForm = (): string | null => {
+    if (!formData.username.trim()) return "Username is required.";
+    if (!formData.first_name.trim() || !formData.last_name.trim())
+      return "First and last name are required.";
+    if (!formData.email.trim()) return "Email is required.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      return "Invalid email format.";
+    if (!formData.phone_number.trim()) return "Phone number is required.";
+    if (formData.password.length < 6)
+      return "Password must be at least 6 characters.";
+    if (formData.password.length > 72)
+      return "Password is too long (max 72 characters)."; // ← NEW: bcrypt limit
+    if (formData.password !== formData.confirm_password)
+      return "Passwords do not match.";
     if (!formData.role) return "Role is required.";
-
     return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
-    setSuccessMsg('');
+    setErrorMsg("");
+    setSuccessMsg("");
 
     const validationError = validateForm();
     if (validationError) {
@@ -55,37 +73,31 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      const response = await axios.post(
-        'http://127.0.0.1:8001/api/users/register/',
-        {
-          username: formData.username,
-          first_name: formData.first_name,
-          last_name: formData.last_name,
-          phone_number: formData.phone_number,
-          email: formData.email,
-          password: formData.password,
-          confirm_password: formData.confirm_password,
-          role: formData.role,
-        },
-        {
-          withCredentials: true,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
+      const response = await axios.post("http://127.0.0.1:8000/auth/register", {
+        username: formData.username.trim(),
+        first_name: formData.first_name.trim(),
+        last_name: formData.last_name.trim(),
+        phone_number: formData.phone_number.trim(),
+        email: formData.email.trim(),
+        password: formData.password, // no need to trim password
+        role: formData.role,
+      });
 
-      setSuccessMsg('Registration successful!');
-      setTimeout(() => navigate('/login'), 1000);
+      setSuccessMsg("Registration successful! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500); // Show success for 1.5s before redirect
     } catch (error: any) {
-      // Show backend validation errors
-      if (error.response?.data?.errors) {
-        const backendErrors = error.response.data.errors;
-        const messages = Object.values(backendErrors).flat().join(' ');
-        setErrorMsg(messages);
-      } else {
-        setErrorMsg('Registration failed. Please try again.');
-      }
-    } finally {
       setLoading(false);
+
+      if (axios.isAxiosError(error) && error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        setErrorMsg(
+          typeof detail === "string" ? detail : detail.join(", ")
+        );
+      } else {
+        setErrorMsg("Failed to register. Please try again later.");
+      }
     }
   };
 
@@ -102,13 +114,15 @@ const Register: React.FC = () => {
           initial={{ x: -100, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="w-full md:w-1/2 bg-[#a2d9e4] flex items-center justify-center relative p-4"
+          className="w-full md:w-1/2 bg-[#a2d9e4] flex items-center justify-center p-4"
         >
           <img
             src="/assets/rvu-logoo1.png"
-            alt="Logo"
-            className="w-full"
-            onError={(e) => ((e.target as HTMLImageElement).style.display = 'none')}
+            alt="RVU Logo"
+            className="w-full max-h-[500px] object-contain"
+            onError={(e) => {
+              e.currentTarget.src = "/assets/fallback.png";
+            }}
           />
         </motion.div>
 
@@ -126,113 +140,43 @@ const Register: React.FC = () => {
               animate="visible"
               transition={{ staggerChildren: 0.1 }}
             >
-              <motion.h1
-                className="text-2xl font-bold text-gray-800 text-center mb-6"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                Create Account
-              </motion.h1>
+              <motion.h1 className="text-2xl font-bold text-center mb-6">Create Account</motion.h1>
 
-              {/* Username */}
-              <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Username</label>
-                <input
-                  type="text"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  className="w-full p-2 rounded border border-gray-300"
-                  required
-                />
-              </motion.div>
-
-              {/* First & Last Name */}
-              <motion.div className="flex flex-col sm:flex-row sm:space-x-4" variants={fieldVariants}>
-                <div className="flex-1 mb-4 sm:mb-0">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">First Name</label>
+              {[
+                { label: "Username", name: "username", type: "text" },
+                { label: "First Name", name: "first_name", type: "text" },
+                { label: "Last Name", name: "last_name", type: "text" },
+                { label: "Phone Number", name: "phone_number", type: "tel" },
+                { label: "Email", name: "email", type: "email" },
+                { label: "Password", name: "password", type: "password" },
+                { label: "Confirm Password", name: "confirm_password", type: "password" },
+              ].map((field) => (
+                <motion.div key={field.name} variants={fieldVariants}>
+                  <label htmlFor={field.name} className="block text-sm font-bold mb-2">
+                    {field.label}
+                  </label>
                   <input
-                    type="text"
-                    name="first_name"
-                    value={formData.first_name}
+                    id={field.name}
+                    type={field.type}
+                    name={field.name}
+                    value={formData[field.name as keyof RegisterFormData]}
                     onChange={handleChange}
-                    className="w-full p-2 rounded border border-gray-300"
+                    className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     required
                   />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
-                  <input
-                    type="text"
-                    name="last_name"
-                    value={formData.last_name}
-                    onChange={handleChange}
-                    className="w-full p-2 rounded border border-gray-300"
-                    required
-                  />
-                </div>
-              </motion.div>
+                </motion.div>
+              ))}
 
-              {/* Phone Number */}
               <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Phone Number</label>
-                <input
-                  type="tel"
-                  name="phone_number"
-                  value={formData.phone_number}
-                  onChange={handleChange}
-                  className="w-full p-2 rounded border border-gray-300"
-                  required
-                />
-              </motion.div>
-
-              {/* Email */}
-              <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="w-full p-2 rounded border border-gray-300"
-                  required
-                />
-              </motion.div>
-
-              {/* Password */}
-              <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Password</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full p-2 rounded border border-gray-300"
-                  required
-                />
-              </motion.div>
-
-              {/* Confirm Password */}
-              <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Confirm Password</label>
-                <input
-                  type="password"
-                  name="confirm_password"
-                  value={formData.confirm_password}
-                  onChange={handleChange}
-                  className="w-full p-2 rounded border border-gray-300"
-                  required
-                />
-              </motion.div>
-
-              {/* Role */}
-              <motion.div variants={fieldVariants}>
-                <label className="block text-gray-700 text-sm font-bold mb-2">Role</label>
+                <label htmlFor="role" className="block text-sm font-bold mb-2">
+                  Role
+                </label>
                 <select
+                  id="role"
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  className="w-full p-2 rounded border border-gray-300"
+                  className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
                   <option value="">Select Role</option>
@@ -242,25 +186,35 @@ const Register: React.FC = () => {
                 </select>
               </motion.div>
 
-              {/* Error / Success Messages */}
-              {errorMsg && <motion.p className="text-red-600 text-sm font-semibold">{errorMsg}</motion.p>}
-              {successMsg && <motion.p className="text-green-600 text-sm font-semibold">{successMsg}</motion.p>}
+              {errorMsg && (
+                <motion.p className="text-red-600 font-semibold text-center" variants={fieldVariants}>
+                  {errorMsg}
+                </motion.p>
+              )}
 
-              {/* Submit Button */}
+              {successMsg && (
+                <motion.p className="text-green-600 font-semibold text-center" variants={fieldVariants}>
+                  {successMsg}
+                </motion.p>
+              )}
+
               <motion.button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-purple-700 text-white p-2 rounded mt-4 hover:bg-purple-800 transition"
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.97 }}
+                className={`w-full bg-purple-700 text-white p-2 rounded hover:bg-purple-800 transition-colors ${
+                  loading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
+                variants={fieldVariants}
               >
                 {loading ? "Registering..." : "Register"}
               </motion.button>
             </motion.form>
 
             <div className="text-center mt-4">
-              <span className="text-gray-700">Already have an account? </span>
-              <Link to="/login" className="text-purple-700 hover:underline">Go to Login</Link>
+              <span>Already have an account? </span>
+              <Link to="/login" className="text-purple-700 hover:underline font-semibold">
+                Go to Login
+              </Link>
             </div>
           </div>
         </motion.div>

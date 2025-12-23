@@ -1,0 +1,6 @@
+Generic single-database configuration with an async dbapi.
+
+uvicorn app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
+
+cd Ai-Powered-Education-In-High-School/backend

@@ -1,23 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // Ethiopian regions
 const regions = [
-  "Addis Ababa",
-  "Afar",
-  "Amhara",
-  "Benishangul-Gumuz",
-  "Dire Dawa",
-  "Gambela",
-  "Harari",
-  "Oromia",
-  "Sidama",
-  "Somali",
-  "Southern Nations, Nationalities, and Peoples' Region (SNNPR)",
-  "Tigray",
+  "Addis Ababa", "Afar", "Amhara", "Benishangul-Gumuz", "Dire Dawa",
+  "Gambela", "Harari", "Oromia", "Sidama", "Somali",
+  "Southern Nations, Nationalities, and Peoples' Region (SNNPR)", "Tigray",
 ];
 
 // Background images
@@ -29,22 +18,6 @@ const bgImages = [
   "/assets/brihanunega.png",
   "/assets/rvu-logoo.png",
 ];
-
-// Helper to get CSRF token
-function getCookie(name: string) {
-  let cookieValue: string | null = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let cookie of cookies) {
-      const [key, value] = cookie.trim().split("=");
-      if (key === name) {
-        cookieValue = decodeURIComponent(value);
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
 
 interface StudentProfile {
   gender: string;
@@ -61,8 +34,6 @@ interface StudentProfile {
 }
 
 const HighSchoolStudentsProfileCompletion: React.FC = () => {
-  const navigate = useNavigate();
-
   const [profile, setProfile] = useState<StudentProfile>({
     gender: "",
     date_of_birth: "",
@@ -94,18 +65,11 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
 
   // Profile completion progress
   useEffect(() => {
-    const fields = [
-      "gender",
-      "date_of_birth",
-      "school_name",
-      "region",
-      "zone",
-      "subcity",
-      "woreda",
-      "grade_level",
-      "student_id",
+    const fields: (keyof StudentProfile)[] = [
+      "gender","date_of_birth","school_name","region","zone",
+      "subcity","woreda","grade_level","student_id",
     ];
-    let filled = fields.filter((f) => profile[f as keyof StudentProfile]).length;
+    const filled = fields.filter(f => profile[f]).length;
     setProfileProgress(Math.round((filled / fields.length) * 100));
   }, [profile]);
 
@@ -123,68 +87,29 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
   };
 
   const validateForm = () => {
-    const requiredFields = [
-      "gender",
-      "date_of_birth",
-      "school_name",
-      "region",
-      "zone",
-      "subcity",
-      "woreda",
-      "grade_level",
-      "student_id",
+    const requiredFields: (keyof StudentProfile)[] = [
+      "gender","date_of_birth","school_name","region","zone",
+      "subcity","woreda","grade_level","student_id",
     ];
     for (let field of requiredFields) {
-      if (!profile[field as keyof StudentProfile]) {
-        return `${field.replace("_", " ")} is required`;
-      }
+      if (!profile[field]) return `${field.replace("_"," ")} is required`;
     }
     return null;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg("");
-    setSuccessMsg("");
+    setErrorMsg(""); setSuccessMsg("");
 
     const validationError = validateForm();
-    if (validationError) {
-      setErrorMsg(validationError);
-      return;
-    }
+    if (validationError) { setErrorMsg(validationError); return; }
 
     setLoading(true);
-
-    try {
-      const formData = new FormData();
-      Object.entries(profile).forEach(([key, value]) => {
-        if (value) formData.append(key, value as any);
-      });
-
-      const csrfToken = getCookie("csrftoken");
-
-     await axios.post(
-        "http://localhost:8001/api/users/profile-completion/",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            "X-CSRFToken": csrfToken
-          },
-          withCredentials: true // required for session auth
-        }
-      );
-
-
+    setTimeout(() => {
       setSuccessMsg("Profile completed successfully!");
-      setTimeout(() => navigate("/h-s-student/dashboard"), 1000);
-    } catch (err: any) {
-      if (err.response?.data?.error) setErrorMsg(JSON.stringify(err.response.data.error));
-      else if (err.response?.data?.detail) setErrorMsg(err.response.data.detail);
-      else setErrorMsg("Failed to complete profile. Please try again.");
-    } finally {
+      localStorage.setItem("highSchoolStudentProfile", JSON.stringify(profile));
       setLoading(false);
-    }
+    }, 1000);
   };
 
   return (
@@ -245,7 +170,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
           {successMsg && <div className="alert alert-success">{successMsg}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Profile Picture */}
             <div className="text-center mb-4">
               {profile.profile_picture_preview ? (
                 <img
@@ -266,7 +190,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
               />
             </div>
 
-            {/* Student ID */}
             <div>
               <label className="form-label font-semibold">Student ID</label>
               <input
@@ -278,7 +201,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
               />
             </div>
 
-            {/* Gender & DOB */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">Gender</label>
@@ -305,7 +227,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
               </div>
             </div>
 
-            {/* School & Region */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">School Name</label>
@@ -326,16 +247,11 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
                   className="form-select border-2 border-pink-400"
                 >
                   <option value="">Select Region</option>
-                  {regions.map((r, idx) => (
-                    <option key={idx} value={r}>
-                      {r}
-                    </option>
-                  ))}
+                  {regions.map((r, idx) => <option key={idx} value={r}>{r}</option>)}
                 </select>
               </div>
             </div>
 
-            {/* Zone & Subcity & Woreda */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">Zone</label>
@@ -369,7 +285,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
               </div>
             </div>
 
-            {/* Grade */}
             <div>
               <label className="form-label font-semibold">Grade Level</label>
               <select
