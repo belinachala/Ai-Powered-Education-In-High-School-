@@ -9,6 +9,8 @@ import TeacherResult from "../pages/highschool/teacher/TeacherResult";
 import TeacherAnalytics from "../pages/highschool/teacher/TeacherAnalytics";
 import TeacherSetting from "../pages/highschool/teacher/TeacherSetting";
 import TeacherProfile from "../pages/highschool/teacher/TeacherProfile";
+import TeacherUploadForm from "@/pages/highschool/teacher/TeacherUploadForm";
+
 
 const HighschoolTeacherRoutes: React.FC = () => {
   return (
@@ -17,11 +19,12 @@ const HighschoolTeacherRoutes: React.FC = () => {
       <Route path="students" element={<TeacherStudents />} />
       <Route path="create-exam" element={<TeacherCreateExam />} />
       <Route path="my-exam" element={<TeacherMyExam />} />
-      <Route path="courses" element={<TeacherCourses />} />
+      <Route path="all-subjects" element={<TeacherCourses />} />
       <Route path="result" element={<TeacherResult />} />
       <Route path="analytics" element={<TeacherAnalytics />} />
       <Route path="setting" element={<TeacherSetting />} />
       <Route path="profile" element={<TeacherProfile />} />
+      <Route path="upload-subjects" element={<TeacherUploadForm />} />
     </Routes>
   );
 };

@@ -5,9 +5,7 @@ from app.db.base import Base
 class DirectorProfile(Base):
     __tablename__ = "director_profiles"
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
-
+  
     director_id = Column(String(50), unique=True, nullable=False)
     gender = Column(String(10), nullable=False)
     date_of_birth = Column(Date, nullable=False)

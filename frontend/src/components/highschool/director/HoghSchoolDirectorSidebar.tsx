@@ -26,6 +26,7 @@ const HighSchoolDirectorSidebar: React.FC = () => {
     { to: "/director/exams", icon: <FaFileAlt />, label: "Exam Management" },
     { to: "/director/payments", icon: <FaMoneyBillWave />, label: "Payments" },
     { to: "/director/results", icon: <FaChartBar />, label: "Results" },
+    { to: "/director/material", icon: <FaFileAlt />, label: "Review Material" },
     { to: "/director/analytics", icon: <FaChartBar />, label: "Analytics" },
     { to: "/director/announcements", icon: <FaBullhorn />, label: "Announcements" }, 
   ];

@@ -130,16 +130,21 @@ const HighSchoolDirectorProfileCompletion: React.FC = () => {
         }
       });
 
-      await axios.patch(
-        "http://127.0.0.1:8000/directors/me/profile",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+     axios
+  .get("http://127.0.0.1:8000/directors/me/profile", {
+    headers: { Authorization: `Bearer ${storedToken}` },
+  })
+  .then(res => {
+    if (res.data.profile_completed) {
+      navigate("/director"); // already completed → skip form
+    }
+  })
+  .catch(err => {
+    if (err.response?.status === 401) {
+      navigate("/login");
+    }
+  });
+
 
       setSuccessMsg("Profile completed successfully!");
       localStorage.setItem("directorProfile", JSON.stringify(profile));

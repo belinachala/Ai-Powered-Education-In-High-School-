@@ -1,34 +1,42 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from jose import jwt
+
 from app.schemas.auth import RegisterRequest, LoginRequest, UserResponse
 from app.models.user import User
 from app.db.session import get_db
 from app.core.security import hash_password, verify_password
-
-# For JWT
-from datetime import datetime, timedelta
-from jose import jwt
+from app.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Secret & JWT settings
-SECRET_KEY = "your_secret_key_here"  # Replace with a strong secret
+# ==============================
+# JWT SETTINGS
+# ==============================
+SECRET_KEY = "your_secret_key_here"  # move to .env later
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60  # 1 hour
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
     expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# ------------------ Registration ------------------
+
+# ==============================
+# REGISTER
+# ==============================
 @router.post("/register", response_model=UserResponse)
-def register_user(data: RegisterRequest, db: Session = Depends(get_db)):
-    # Check username/email exists
+def register_user(
+    data: RegisterRequest,
+    db: Session = Depends(get_db)
+):
     if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="Username already exists")
+
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status_code=400, detail="Email already exists")
 
@@ -41,25 +49,53 @@ def register_user(data: RegisterRequest, db: Session = Depends(get_db)):
         role=data.role,
         password_hash=hash_password(data.password)
     )
+
     db.add(user)
     db.commit()
     db.refresh(user)
+
     return user
 
-# ------------------ Login ------------------
+
+# ==============================
+# LOGIN
+# ==============================
 @router.post("/login")
-def login_user(data: LoginRequest, db: Session = Depends(get_db)):
+def login_user(
+    data: LoginRequest,
+    db: Session = Depends(get_db)
+):
     user = db.query(User).filter(User.username == data.username).first()
+
     if not user or not verify_password(data.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
-    # Create JWT token
-    token = create_access_token({"user_id": user.id, "role": user.role})
+    token = create_access_token({
+        "user_id": user.id,
+        "role": user.role
+    })
 
-    # Return token + user info
     return {
         "access_token": token,
         "token_type": "bearer",
         "username": user.username,
         "role": user.role
+    }
+
+
+# ==============================
+# ✅ GET CURRENT USER (NEW)
+# ==============================
+@router.get("/me")
+def get_current_user_info(
+    current_user: User = Depends(get_current_user)
+):
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
+        "email": current_user.email,
+        "phone_number": current_user.phone_number,
+        "role": current_user.role
     }

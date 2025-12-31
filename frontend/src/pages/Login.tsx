@@ -43,44 +43,60 @@ const Login: React.FC = () => {
         JSON.stringify({ username: user.username, role: user.role })
       );
 
-      // Special handling for school directors
-     if (user.role === "schooldirector") {
-  try {
-    // Fetch director profile using token
-    const profileCheck = await axios.get(
-      "http://127.0.0.1:8000/directors/me/profile",
-      {
-        headers: {
-          Authorization: `Bearer ${response.data.access_token}`
+      // Handle school director
+      if (user.role === "schooldirector") {
+        try {
+          const profileCheck = await axios.get(
+            "http://127.0.0.1:8000/directors/me/profile",
+            {
+              headers: { Authorization: `Bearer ${user.access_token}` },
+            }
+          );
+          if (profileCheck.data.director_id) navigate("/director");
+          else navigate("/directorprofile");
+        } catch {
+          navigate("/directorprofile");
         }
       }
-    );
 
-    // If profile exists (director_id filled) → dashboard
-    if (profileCheck.data.director_id) {
-      navigate("/director");
-    } else {
-      // Else → profile completion
-      navigate("/directorprofile");
-    }
-  } catch (profileError: any) {
-    // If 401, 403, or other error → go to profile completion
-    navigate("/directorprofile");
-  }
-}
-
-      // Other roles
-      else if (user.role === "teacher") {
-        navigate("/h-s-teacher/dashboard");
-      } else if (user.role === "student") {
-        navigate("/h-s-student/dashboard");
-      } else {
-        navigate("/dashboard");
+      // Handle student
+      else if (user.role === "student") {
+        try {
+          const profileCheck = await axios.get(
+            "http://127.0.0.1:8000/students/me/profile",
+            {
+              headers: { Authorization: `Bearer ${user.access_token}` },
+            }
+          );
+          // If profile exists → dashboard, else → profile completion
+          if (profileCheck.data.student_id) navigate("/h-s-student/dashboard");
+          else navigate("/h-s-s-profile");
+        } catch {
+          navigate("/h-s-s-profile");
+        }
       }
+
+      // Handle teacher 
+      else if (user.role === "teacher") {
+        try {
+          const profileCheck = await axios.get(
+            "http://127.0.0.1:8000/teachers/me/profile",
+            {
+              headers: { Authorization: `Bearer ${user.access_token}` },
+            }
+          );
+          // If profile exists → dashboard, else → profile completion
+          if (profileCheck.data.teacher_id) navigate("/h-s-teacher/dashboard");
+          else navigate("/h-s-t-profile");
+        } catch {
+          navigate("/h-s-t-profile");
+        }
+      }
+      
     } catch (err: any) {
       setError(
         err.response?.data?.detail ||
-          "Invalid username or password. Please try again."
+        "Invalid username or password. Please try again."
       );
     } finally {
       setLoading(false);

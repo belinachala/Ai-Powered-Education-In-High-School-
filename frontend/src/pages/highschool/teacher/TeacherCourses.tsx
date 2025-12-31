@@ -86,7 +86,7 @@ const TeacherCourses: React.FC = () => {
             { id: 4, name: "Grade 11 Chemistry", pdf: "/pdfs/grade11/natural/chemistry11.pdf", image: "/assets/courses/chemistry11.png" },
             { id: 5, name: "Grade 11 Biology", pdf: "/pdfs/grade11/natural/biology11.pdf", image: "/assets/courses/biology11.png" },
             { id: 6, name: "Grade 11 Civics", pdf: "/pdfs/grade11/natural/civics11.pdf", image: "/assets/courses/civics11.png" },
-           { id: 7, name: "Grade 11 Agriculture", pdf: "/pdfs/grade11/natural/agriculture11.pdf", image: "/assets/courses/agriculture11.png" },
+            { id: 7, name: "Grade 11 Agriculture", pdf: "/pdfs/grade11/natural/agriculture11.pdf", image: "/assets/courses/agriculture11.png" },
            
           ],
         },
@@ -175,6 +175,43 @@ const TeacherCourses: React.FC = () => {
             { id: 5, name: "Economics", pdf: "/pdfs/entrance/social/economics.pdf", image: "/assets/courses/economics.png" },
             { id: 6, name: "Civics", pdf: "/pdfs/entrance/social/civics.pdf", image: "/assets/courses/civics.png" },
             { id: 7, name: "Aptitude", pdf: "/pdfs/entrance/social/aptitude.pdf", image: "/assets/courses/aptitude.png" },
+          ],
+        },
+      ],
+    },
+    // ====== NEW: Remedial Courses ======
+    {
+      id: 14,
+      title: "Remedial all subjects based on Ethiopia New Curriculum",
+      image: "/assets/remedial.jpg", // You can change this to your actual image path
+      description: "Remedial materials to strengthen foundational knowledge for university preparation.",
+      fields: [
+        {
+          name: "Natural Science Stream",
+          image: "/assets/natural.png",
+          recommendation: "Designed for students retaking or strengthening science subjects for better performance.",
+          courses: [
+            { id: 1, name: "English", pdf: "/pdfs/remedial/natural/english.pdf", image: "/assets/courses/english.png" },
+            { id: 2, name: "Mathmathics", pdf: "/pdfs/remedial/natural/math.pdf", image: "/assets/courses/math.png" },
+            { id: 3, name: "Physics", pdf: "/pdfs/remedial/natural/physics.pdf", image: "/assets/courses/physics.png" },
+            { id: 4, name: "Chemistry", pdf: "/pdfs/remedial/natural/chemistry.pdf", image: "/assets/courses/chemistry.png" },
+            { id: 5, name: "Biology", pdf: "/pdfs/remedial/natural/biology.pdf", image: "/assets/courses/biology.png" },
+            { id: 6, name: "Civics", pdf: "/pdfs/remedial/natural/civics.pdf", image: "/assets/courses/civics.png" },
+            { id: 7, name: "Aptitude", pdf: "/pdfs/remedial/natural/aptitude.pdf", image: "/assets/courses/aptitude.png" },
+          ],
+        },
+        {
+          name: "Social Science Stream",
+          image: "/assets/social.png",
+          recommendation: "For students improving their foundation in social sciences and general aptitude.",
+          courses: [
+            { id: 1, name: "English", pdf: "/pdfs/remedial/social/english.pdf", image: "/assets/courses/english.png" },
+            { id: 2, name: "Mathmathics", pdf: "/pdfs/remedial/social/math.pdf", image: "/assets/courses/math.png" },
+            { id: 3, name: "History", pdf: "/pdfs/remedial/social/history.pdf", image: "/assets/courses/history.png" },
+            { id: 4, name: "Geography", pdf: "/pdfs/remedial/social/geography.pdf", image: "/assets/courses/geography.png" },
+            { id: 5, name: "Economics", pdf: "/pdfs/remedial/social/economics.pdf", image: "/assets/courses/economics.png" },
+            { id: 6, name: "Civics", pdf: "/pdfs/remedial/social/civics.pdf", image: "/assets/courses/civics.png" },
+            { id: 7, name: "Aptitude", pdf: "/pdfs/remedial/social/aptitude.pdf", image: "/assets/courses/aptitude.png" },
           ],
         },
       ],

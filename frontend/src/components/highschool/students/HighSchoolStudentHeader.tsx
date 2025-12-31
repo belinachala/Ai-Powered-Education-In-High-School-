@@ -1,16 +1,58 @@
-import React, { useState } from "react";
-import { FaBell, FaUserCircle, FaSearch, FaChevronDown, FaBars } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import {
+  FaBell,
+  FaUserCircle,
+  FaSearch,
+  FaChevronDown,
+  FaBars,
+} from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
+const API_BASE_URL = "http://127.0.0.1:8000"; // Your backend URL
+
 const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [fullName, setFullName] = useState("Student");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+
   const navigate = useNavigate();
 
+  // ==========================
+  // Fetch student profile info
+  // ==========================
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    axios
+      .get(`${API_BASE_URL}/students/me/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const data = res.data;
+        if (data.first_name && data.last_name) {
+          setFullName(`${data.first_name} ${data.last_name}`);
+        }
+
+        if (data.profile_picture_url) {
+          // Fix Windows-style backslashes in path & add timestamp to prevent caching
+          const imgPath = data.profile_picture_url.replaceAll("\\", "/");
+          setProfileImage(`${API_BASE_URL}/${imgPath}?t=${new Date().getTime()}`);
+        }
+      })
+      .catch(() => {
+        setFullName("Student");
+        setProfileImage(null);
+      });
+  }, []);
+
   const handleLogout = () => {
+    localStorage.removeItem("token");
     setDropdownOpen(false);
     navigate("/#");
   };
@@ -27,9 +69,8 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
 
   return (
     <header className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 md:px-6 py-3 md:py-4 shadow-md sticky top-0 z-30 w-full">
-      {/* Left Section: Hamburger + Title */}
+      {/* Left Section */}
       <div className="flex items-center gap-3 md:gap-6">
-        {/* Hamburger (for mobile only) */}
         <button
           onClick={onToggleSidebar}
           className="text-white text-2xl md:hidden focus:outline-none"
@@ -42,7 +83,7 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
         </h5>
       </div>
 
-      {/* Search Bar (hidden on small screens) */}
+      {/* Search */}
       <div className="hidden md:block w-64 lg:w-96 relative">
         <input
           type="text"
@@ -52,7 +93,7 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
         <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-200" />
       </div>
 
-      {/* Right Section: Notifications + Profile Dropdown */}
+      {/* Right Section */}
       <div className="flex items-center space-x-4 md:space-x-8">
         {/* Notifications */}
         <div className="relative cursor-pointer">
@@ -68,8 +109,18 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center space-x-2 md:space-x-3 hover:text-blue-300 transition"
           >
-            <FaUserCircle className="text-2xl md:text-3xl" />
-            <span className="font-medium hidden sm:block">Student Yonas</span>
+            {profileImage ? (
+              <img
+                src={profileImage}
+                alt="Profile"
+                className="w-9 h-9 rounded-full object-cover border"
+              />
+            ) : (
+              <FaUserCircle className="text-2xl md:text-3xl" />
+            )}
+
+            <span className="font-medium hidden sm:block">{fullName}</span>
+
             <FaChevronDown
               className={`transition-transform duration-200 ${
                 dropdownOpen ? "rotate-180" : ""

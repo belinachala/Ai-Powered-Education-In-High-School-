@@ -12,7 +12,7 @@ import HighSchoolDirectorAnalytics from "@/pages/highschool/director/HighSchoolD
 import HighSchoolDirectorAnnouncements from "@/pages/highschool/director/HighSchoolDirectorAnnouncements";
 import HighSchoolDirectorSettings from "@/pages/highschool/director/HighSchoolDirectorSettings";
 import HighSchoolDirectorProfile from "@/pages/highschool/director/HighSchoolDirectorProfile";
-
+import MaterialReview from "@/pages/highschool/director/MaterialReview";
 const HighSchoolDirectorRoutes: React.FC = () => {
   return (
     <div className="p-6 bg-gray-50 min-h-screen overflow-y-auto">
@@ -27,6 +27,7 @@ const HighSchoolDirectorRoutes: React.FC = () => {
         <Route path="exams" element={<HighSchoolDirectorExamManagement />} />
         <Route path="payments" element={<HighSchoolDirectorPayments />} />
         <Route path="results" element={<HighSchoolDirectorResults />} />
+        <Route path="material" element={<MaterialReview />} />
         <Route path="analytics" element={<HighSchoolDirectorAnalytics />} />
         <Route path="announcements" element={<HighSchoolDirectorAnnouncements />} />
         <Route path="settings" element={<HighSchoolDirectorSettings />} />

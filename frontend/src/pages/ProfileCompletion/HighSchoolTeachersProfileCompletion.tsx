@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Select from "react-select";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // Regions list
@@ -42,6 +44,11 @@ const gradeOptions = [
 ];
 
 const HighSchoolTeachersProfileCompletion: React.FC = () => {
+  const navigate = useNavigate();
+
+  const [showForm, setShowForm] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+
   const [profile, setProfile] = useState<any>({
     teacher_id: "",
     gender: "",
@@ -53,81 +60,149 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
     zone: "",
     years_of_experience: "",
     subjects_taught: [],
-    grade_levels: [],
+    grade_level: [],
     profile_picture: null,
     profile_picture_preview: "",
   });
 
-  const [showForm, setShowForm] = useState(false);
   const [profileProgress, setProfileProgress] = useState(0);
   const [currentBg, setCurrentBg] = useState(0);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Load token and fetch existing profile
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (!storedToken) {
+      navigate("/login");
+      return;
+    }
+    setToken(storedToken);
+
+    axios.get("http://127.0.0.1:8000/teachers/me/profile", {
+      headers: { Authorization: `Bearer ${storedToken}` }
+    }).then(res => {
+      if (res.data) {
+        setProfile({
+          teacher_id: res.data.teacher_id || "",
+          gender: res.data.gender || "",
+          date_of_birth: res.data.date_of_birth || "",
+          school_name: res.data.school_name || "",
+          region: res.data.region || "",
+          subcity: res.data.subcity || "",
+          woreda: res.data.woreda || "",
+          zone: res.data.zone || "",
+          years_of_experience: res.data.years_of_experience || "",
+          subjects_taught: res.data.subjects_taught || [],
+          grade_level: res.data.grade_level || [],
+          profile_picture: null,
+          profile_picture_preview: res.data.profile_picture_url || "",
+        });
+
+        // ✅ Redirect if profile already completed
+        if (res.data.profile_completed) {
+          localStorage.setItem("highSchoolTeacherProfileCompleted", "true");
+          navigate("/h-s-teacher/dashboard");
+        }
+      }
+    }).catch(err => {
+      if (err.response?.status !== 401) console.log(err);
+    });
+  }, [navigate]);
+
   // Background carousel
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentBg((prev) => (prev + 1) % bgImages.length);
-    }, 7000);
+    const interval = setInterval(() => setCurrentBg(prev => (prev + 1) % bgImages.length), 7000);
     return () => clearInterval(interval);
   }, []);
 
-  // Calculate profile completion progress
+  // Profile completion progress
   useEffect(() => {
     const fields = [
       "teacher_id", "gender", "date_of_birth", "school_name",
       "region", "subcity", "woreda", "zone", "years_of_experience",
-      "subjects_taught", "grade_levels"
+      "subjects_taught", "grade_level"
     ];
-    let filled = fields.filter(f => {
-      if (Array.isArray(profile[f])) return profile[f].length > 0;
-      return profile[f];
-    }).length;
+    const filled = fields.filter(f => Array.isArray(profile[f]) ? profile[f].length > 0 : profile[f]).length;
     setProfileProgress(Math.round((filled / fields.length) * 100));
   }, [profile]);
 
-  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
+    setProfile(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle file upload
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const preview = URL.createObjectURL(file);
-      setProfile({ ...profile, profile_picture: file, profile_picture_preview: preview });
+      setProfile(prev => ({ ...prev, profile_picture: file, profile_picture_preview: preview }));
     }
   };
 
-  // Frontend-only form submission
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMsg("");
     setSuccessMsg("");
 
+    if (!token) {
+      setErrorMsg("Please log in first to complete your profile.");
+      navigate("/login");
+      return;
+    }
+
     const requiredFields = [
       "teacher_id", "gender", "date_of_birth", "school_name",
       "region", "subcity", "woreda", "zone", "years_of_experience",
-      "subjects_taught", "grade_levels"
+      "subjects_taught", "grade_level"
     ];
 
-    for (let field of requiredFields) {
+    for (const field of requiredFields) {
       if (!profile[field] || (Array.isArray(profile[field]) && profile[field].length === 0)) {
-        setErrorMsg(`${field.replace("_", " ")} is required`);
+        setErrorMsg(`${field.replace("_"," ")} is required`);
         return;
       }
     }
 
     setLoading(true);
-    // Simulate saving profile
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      Object.keys(profile).forEach(key => {
+        if (key === "profile_picture" && profile.profile_picture) {
+          formData.append("profile_picture", profile.profile_picture);
+        } else if (key !== "profile_picture" && key !== "profile_picture_preview") {
+          if (Array.isArray(profile[key])) {
+            formData.append(key, profile[key].join(","));
+          } else {
+            formData.append(key, profile[key]);
+          }
+        }
+      });
+
+      await axios.post(
+        "http://127.0.0.1:8000/teachers/me/profile",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
       setSuccessMsg("Profile completed successfully!");
       localStorage.setItem("highSchoolTeacherProfile", JSON.stringify(profile));
+      localStorage.setItem("highSchoolTeacherProfileCompleted", "true");
+
+      setTimeout(() => navigate("/h-s-teacher/dashboard"), 1500);
+
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.response?.data?.detail || "Failed to save profile. Please try again.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -166,7 +241,7 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative z-10 bg-white rounded-3xl shadow-2xl p-10 max-w-3xl w-full"
+          className="relative z-10 bg-white rounded-3xl shadow-2xl p-10 max-w-4xl w-full overflow-auto"
         >
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">🏫 High School Teacher Profile</h2>
 
@@ -184,7 +259,6 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
           {successMsg && <div className="alert alert-success">{successMsg}</div>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Profile Picture */}
             <div className="text-center mb-4">
               {profile.profile_picture_preview ? (
                 <img src={profile.profile_picture_preview} alt="profile preview" className="w-28 h-28 rounded-full mx-auto object-cover border-4 border-blue-500" />
@@ -196,13 +270,11 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
               <input type="file" accept="image/*" onChange={handleFileChange} className="form-control mt-2" />
             </div>
 
-            {/* Teacher ID */}
             <div>
               <label className="form-label font-semibold">Teacher ID</label>
               <input type="text" name="teacher_id" value={profile.teacher_id} onChange={handleChange} className="form-control border-2 border-purple-400" />
             </div>
 
-            {/* Gender & DOB */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">Gender</label>
@@ -218,7 +290,6 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
               </div>
             </div>
 
-            {/* School Name & Region */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">School Name</label>
@@ -235,7 +306,6 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
               </div>
             </div>
 
-            {/* Subcity & Woreda */}
             <div className="flex gap-4">
               <div className="flex-1">
                 <label className="form-label font-semibold">Subcity</label>
@@ -245,22 +315,17 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
                 <label className="form-label font-semibold">Woreda</label>
                 <input type="text" name="woreda" value={profile.woreda} onChange={handleChange} className="form-control border-2 border-purple-400" />
               </div>
-            </div>
-
-            {/* Zone & Experience */}
-            <div className="flex gap-4">
               <div className="flex-1">
-                <label className="form-label font-semibold">Zone where the school is found</label>
+                <label className="form-label font-semibold">Zone</label>
                 <input type="text" name="zone" value={profile.zone} onChange={handleChange} className="form-control border-2 border-blue-400" />
               </div>
               <div className="flex-1">
                 <label className="form-label font-semibold">Years of Experience</label>
-                <input type="number" min={0} name="years_of_experience" value={profile.years_of_experience} onChange={handleChange} className="form-control border-2 border-purple-400" />
+                <input type="number" name="years_of_experience" value={profile.years_of_experience} onChange={handleChange} className="form-control border-2 border-purple-400" />
               </div>
             </div>
 
-            {/* Multi-select Subjects & Grades */}
-            <div className="row">
+            <div className="row mt-4">
               <div className="col-md-6 mb-3">
                 <label className="form-label font-semibold">Subjects Taught</label>
                 <Select
@@ -275,8 +340,8 @@ const HighSchoolTeachersProfileCompletion: React.FC = () => {
                 <Select
                   isMulti
                   options={gradeOptions}
-                  value={gradeOptions.filter(g => profile.grade_levels.includes(g.value))}
-                  onChange={(selected) => setProfile({ ...profile, grade_levels: (selected as any).map((g: any) => g.value) })}
+                  value={gradeOptions.filter(g => profile.grade_level.includes(g.value))}
+                  onChange={(selected) => setProfile({ ...profile, grade_level: (selected as any).map((g: any) => g.value) })}
                 />
               </div>
             </div>

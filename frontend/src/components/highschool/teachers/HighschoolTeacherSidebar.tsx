@@ -24,7 +24,8 @@ const HighschoolTeacherSidebar: React.FC = () => {
     { name: "Students", icon: <Users size={20} />, path: "/h-s-teacher/students" },
     { name: "Create Exam", icon: <FilePlus2 size={20} />, path: "/h-s-teacher/create-exam" },
     { name: "My Exam", icon: <FileText size={20} />, path: "/h-s-teacher/my-exam" },
-    { name: "Courses", icon: <BookOpen size={20} />, path: "/h-s-teacher/courses" },
+    { name: "Upload Subjects", icon: <BookOpen size={20} />, path: "/h-s-teacher/upload-subjects" },
+    { name: "All Subjects", icon: <BookOpen size={20} />, path: "/h-s-teacher/all-subjects" },
     { name: "Result", icon: <Award size={20} />, path: "/h-s-teacher/result" },
     { name: "Analytics", icon: <BarChart3 size={20} />, path: "/h-s-teacher/analytics" }, 
   ];

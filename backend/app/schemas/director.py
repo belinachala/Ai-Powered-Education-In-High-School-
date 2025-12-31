@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import date
-
+from typing import List, Optional
 class DirectorProfileResponse(BaseModel):
     id: int
     user_id: int

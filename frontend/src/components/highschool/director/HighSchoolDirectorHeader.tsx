@@ -1,6 +1,7 @@
-import React, { useState } from "react";
-import { FaBell, FaUserCircle, FaSearch, FaChevronDown, FaBars } from "react-icons/fa";
+import React, { useState, useEffect } from "react";
+import { FaBell, FaSearch, FaChevronDown, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -8,7 +9,29 @@ interface HeaderProps {
 
 const HighSchoolDirectorHeader: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [profileImage, setProfileImage] = useState<string>("/assets/default-avatar.png"); // fallback
+
   const navigate = useNavigate();
+  const token = localStorage.getItem("token");
+
+  // Fetch profile picture only once on mount
+  useEffect(() => {
+    if (!token) return;
+
+    axios
+      .get("http://127.0.0.1:8000/directors/me/profile", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const pictureUrl = res.data.profile_picture_url;
+        if (pictureUrl) {
+          setProfileImage(`http://127.0.0.1:8000/${pictureUrl.replaceAll("\\", "/")}`);
+        }
+      })
+      .catch(() => {
+        // Keep default if failed
+      });
+  }, [token]);
 
   const handleLogout = () => {
     setDropdownOpen(false);
@@ -63,7 +86,16 @@ const HighSchoolDirectorHeader: React.FC<HeaderProps> = ({ toggleSidebar }) => {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center space-x-1 md:space-x-3 hover:text-blue-300 transition"
           >
-            <FaUserCircle className="text-2xl md:text-4xl" />
+            {/* Real Profile Picture */}
+            <img
+              src={profileImage}
+              alt="Director"
+              className="w-10 h-10 md:w-12 md:h-12 rounded-full object-cover border-4 border-white shadow-lg"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "/assets/default-avatar.png";
+              }}
+            />
+
             <span className="font-medium text-sm md:text-lg">Director Belina</span>
             <FaChevronDown
               className={`transition-transform duration-200 ${

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 
 // Ethiopian regions
@@ -20,6 +22,7 @@ const bgImages = [
 ];
 
 interface StudentProfile {
+  student_id: string;
   gender: string;
   date_of_birth: string;
   school_name: string;
@@ -28,13 +31,15 @@ interface StudentProfile {
   subcity: string;
   woreda: string;
   grade_level: string;
-  student_id: string;
   profile_picture: File | null;
   profile_picture_preview: string;
 }
 
 const HighSchoolStudentsProfileCompletion: React.FC = () => {
+  const navigate = useNavigate();
+
   const [profile, setProfile] = useState<StudentProfile>({
+    student_id: "",
     gender: "",
     date_of_birth: "",
     school_name: "",
@@ -43,7 +48,6 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
     subcity: "",
     woreda: "",
     grade_level: "",
-    student_id: "",
     profile_picture: null,
     profile_picture_preview: "",
   });
@@ -54,11 +58,46 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+
+  // Load token and verify user
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (!storedToken) {
+      navigate("/login"); // Redirect if no token
+      return;
+    }
+    setToken(storedToken);
+
+    // Optional: fetch existing profile
+    axios.get("http://127.0.0.1:8000/students/me/profile", {
+      headers: { Authorization: `Bearer ${storedToken}` }
+    }).then(res => {
+      if (res.data?.student_id) {
+        setProfile({
+          student_id: res.data.student_id || "",
+          gender: res.data.gender || "",
+          date_of_birth: res.data.date_of_birth || "",
+          school_name: res.data.school_name || "",
+          region: res.data.region || "",
+          zone: res.data.zone || "",
+          subcity: res.data.subcity || "",
+          woreda: res.data.woreda || "",
+          grade_level: res.data.grade_level || "",
+          profile_picture: null,
+          profile_picture_preview: res.data.profile_picture_url || "",
+        });
+        navigate("/student"); // already completed → redirect
+      }
+    }).catch(err => {
+      if (err.response?.status !== 401) console.log(err);
+    });
+  }, [navigate]);
 
   // Background carousel
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentBg((prev) => (prev + 1) % bgImages.length);
+      setCurrentBg(prev => (prev + 1) % bgImages.length);
     }, 7000);
     return () => clearInterval(interval);
   }, []);
@@ -66,8 +105,8 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
   // Profile completion progress
   useEffect(() => {
     const fields: (keyof StudentProfile)[] = [
-      "gender","date_of_birth","school_name","region","zone",
-      "subcity","woreda","grade_level","student_id",
+      "student_id","gender","date_of_birth","school_name","region",
+      "zone","subcity","woreda","grade_level"
     ];
     const filled = fields.filter(f => profile[f]).length;
     setProfileProgress(Math.round((filled / fields.length) * 100));
@@ -75,41 +114,72 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
+    setProfile(prev => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const preview = URL.createObjectURL(file);
-      setProfile({ ...profile, profile_picture: file, profile_picture_preview: preview });
+      setProfile(prev => ({ ...prev, profile_picture: file, profile_picture_preview: preview }));
     }
   };
 
-  const validateForm = () => {
-    const requiredFields: (keyof StudentProfile)[] = [
-      "gender","date_of_birth","school_name","region","zone",
-      "subcity","woreda","grade_level","student_id",
-    ];
-    for (let field of requiredFields) {
-      if (!profile[field]) return `${field.replace("_"," ")} is required`;
-    }
-    return null;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErrorMsg(""); setSuccessMsg("");
+    setErrorMsg("");
+    setSuccessMsg("");
 
-    const validationError = validateForm();
-    if (validationError) { setErrorMsg(validationError); return; }
+    if (!token) {
+      setErrorMsg("Please log in first to complete your profile.");
+      navigate("/login");
+      return;
+    }
+
+    // Required fields validation
+    const requiredFields: (keyof StudentProfile)[] = [
+      "student_id","gender","date_of_birth","school_name","region",
+      "zone","subcity","woreda","grade_level"
+    ];
+    for (const field of requiredFields) {
+      if (!profile[field]) {
+        setErrorMsg(`${field.replace("_"," ")} is required`);
+        return;
+      }
+    }
 
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const formData = new FormData();
+      Object.keys(profile).forEach(key => {
+        if (key === "profile_picture" && profile.profile_picture) {
+          formData.append("profile_picture", profile.profile_picture);
+        } else if (key !== "profile_picture" && key !== "profile_picture_preview") {
+          formData.append(key, profile[key as keyof StudentProfile].toString());
+        }
+      });
+
+      await axios.post(
+        "http://127.0.0.1:8000/students/me/profile",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
       setSuccessMsg("Profile completed successfully!");
       localStorage.setItem("highSchoolStudentProfile", JSON.stringify(profile));
+      setTimeout(() => navigate("/h-s-student/dashboard"), 1500);
+
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.detail || "Failed to save profile. Please try again.");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -119,10 +189,10 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
           key={currentBg}
           src={bgImages[currentBg]}
           alt="background"
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
-          initial={{ opacity: 0, scale: 1 }}
-          animate={{ opacity: 0.6, scale: 1.1 }}
-          exit={{ opacity: 0, scale: 1.05 }}
+          className="absolute top-0 left-0 w-full h-full object-cover opacity-50 z-0"
+          initial={{ opacity: 0, scale: 1.1 }}
+          animate={{ opacity: 0.5, scale: 1 }}
+          exit={{ opacity: 0, scale: 1.1 }}
           transition={{ duration: 7 }}
         />
       </AnimatePresence>
@@ -166,10 +236,11 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
             </p>
           </div>
 
-          {errorMsg && <div className="alert alert-danger">{errorMsg}</div>}
-          {successMsg && <div className="alert alert-success">{successMsg}</div>}
+          {errorMsg && <p className="text-red-600 text-center font-semibold mb-4">{errorMsg}</p>}
+          {successMsg && <p className="text-green-600 text-center font-semibold mb-4">{successMsg}</p>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Profile Picture */}
             <div className="text-center mb-4">
               {profile.profile_picture_preview ? (
                 <img
@@ -186,112 +257,119 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
                 type="file"
                 accept="image/*"
                 onChange={handleFileChange}
-                className="form-control mt-2"
+                className="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
               />
             </div>
 
+            {/* Student ID */}
             <div>
-              <label className="form-label font-semibold">Student ID</label>
+              <label className="block text-gray-700 font-semibold mb-2">Student ID</label>
               <input
                 type="text"
                 name="student_id"
                 value={profile.student_id}
                 onChange={handleChange}
-                className="form-control border-2 border-purple-400"
+                className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
               />
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">Gender</label>
+            {/* Gender & DOB */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Gender</label>
                 <select
                   name="gender"
                   value={profile.gender}
                   onChange={handleChange}
-                  className="form-select border-2 border-blue-400"
+                  className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
                 >
                   <option value="">Select Gender</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                 </select>
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Date of Birth</label>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Date of Birth</label>
                 <input
                   type="date"
                   name="date_of_birth"
                   value={profile.date_of_birth}
                   onChange={handleChange}
-                  className="form-control border-2 border-purple-300"
+                  className="w-full p-3 border-2 border-purple-300 rounded-lg focus:outline-none focus:border-purple-600"
                 />
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">School Name</label>
+            {/* School Name & Region */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">School Name</label>
                 <input
                   type="text"
                   name="school_name"
                   value={profile.school_name}
                   onChange={handleChange}
-                  className="form-control border-2 border-purple-400"
+                  className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
                 />
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Region</label>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Region</label>
                 <select
                   name="region"
                   value={profile.region}
                   onChange={handleChange}
-                  className="form-select border-2 border-pink-400"
+                  className="w-full p-3 border-2 border-pink-400 rounded-lg focus:outline-none focus:border-pink-600"
                 >
                   <option value="">Select Region</option>
-                  {regions.map((r, idx) => <option key={idx} value={r}>{r}</option>)}
+                  {regions.map((r, idx) => (
+                    <option key={idx} value={r}>{r}</option>
+                  ))}
                 </select>
               </div>
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="form-label font-semibold">Zone</label>
+            {/* Zone, Subcity, Woreda */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Zone</label>
                 <input
                   type="text"
                   name="zone"
                   value={profile.zone}
                   onChange={handleChange}
-                  className="form-control border-2 border-blue-400"
+                  className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
                 />
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Subcity</label>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Subcity</label>
                 <input
                   type="text"
                   name="subcity"
                   value={profile.subcity}
                   onChange={handleChange}
-                  className="form-control border-2 border-purple-400"
+                  className="w-full p-3 border-2 border-purple-400 rounded-lg focus:outline-none focus:border-purple-600"
                 />
               </div>
-              <div className="flex-1">
-                <label className="form-label font-semibold">Woreda</label>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Woreda</label>
                 <input
                   type="text"
                   name="woreda"
                   value={profile.woreda}
                   onChange={handleChange}
-                  className="form-control border-2 border-blue-400"
+                  className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
                 />
               </div>
             </div>
 
+            {/* Grade Level */}
             <div>
-              <label className="form-label font-semibold">Grade Level</label>
+              <label className="block text-gray-700 font-semibold mb-2">Grade Level</label>
               <select
                 name="grade_level"
                 value={profile.grade_level}
                 onChange={handleChange}
-                className="form-select border-2 border-blue-400"
+                className="w-full p-3 border-2 border-blue-400 rounded-lg focus:outline-none focus:border-blue-600"
               >
                 <option value="">Select Grade</option>
                 <option value="9">Grade 9</option>
@@ -304,7 +382,9 @@ const HighSchoolStudentsProfileCompletion: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="btn w-full mt-4 text-white bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:scale-105 transition-transform"
+              className={`w-full mt-6 py-3 text-white font-bold rounded-lg transition-all transform hover:scale-105 ${
+                loading ? "bg-gray-400 cursor-not-allowed" : "bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"
+              }`}
             >
               {loading ? "Saving..." : "Complete Profile"}
             </button>
