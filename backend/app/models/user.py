@@ -17,7 +17,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False)
 
-    # Director fields
+
     teacher_id = Column(String(50), unique=True, nullable=True)
     student_id = Column(String(50), unique=True, nullable=True)
     director_id = Column(String(50), unique=True, nullable=True)
@@ -30,11 +30,9 @@ class User(Base):
     woreda = Column(String(100), nullable=True)
     years_of_experience = Column(Integer, nullable=True)
     profile_picture_url = Column(String(255), nullable=True)
-         # Student-only fields
     # =======================
     grade_levels = Column(ARRAY(String(50)), nullable=True)
     
-     # Teacher-only fields
     # ========================
    
     subjects_taught = Column(String(255), nullable=True)  # comma-separated 

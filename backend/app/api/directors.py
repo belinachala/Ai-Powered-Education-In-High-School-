@@ -156,3 +156,77 @@ def update_director_profile(
     return {
         "message": "Director profile updated successfully"
     }
+    
+    # ================================
+# GET ALL TEACHERS (for director)
+# ================================
+@router.get("/teachers")
+def get_all_teachers(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # ✅ Role check: only directors
+    if current_user.role != "schooldirector":
+        raise HTTPException(status_code=403, detail="Only directors can access teachers list")
+
+    teachers = db.query(User).filter(User.role == "teacher").all()
+    if not teachers:
+        return {"message": "No teachers found", "teachers": []}
+
+    # Convert to JSON-friendly dict
+    teachers_list = []
+    for t in teachers:
+        teachers_list.append({
+            "id": t.id,
+            "username": t.username,
+            "first_name": t.first_name,
+            "last_name": t.last_name,
+            "email": t.email,
+            "phone_number": t.phone_number,
+            "teacher_id": t.teacher_id,
+            "gender": t.gender,
+            "date_of_birth": t.date_of_birth,
+            "school_name": t.school_name,
+            "region": t.region,
+            "zone": t.zone,
+            "subcity": t.subcity,
+            "woreda": t.woreda,
+            "years_of_experience": t.years_of_experience,
+            "subjects_taught": t.subjects_taught.split(",") if t.subjects_taught else [],
+            "grade_levels": t.grade_levels if t.grade_levels else [],
+            "profile_picture_url": t.profile_picture_url
+        })
+
+    return {"teachers": teachers_list}
+
+# ---------------------------
+# GET ALL STUDENTS
+# ---------------------------
+@router.get("/students")
+def get_all_students(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role != "schooldirector":
+        raise HTTPException(status_code=403, detail="Only directors can access students")
+
+    students = db.query(User).filter(User.role == "student").all()
+
+    result = []
+    for s in students:
+        result.append({
+            "id": s.id,
+            "username": s.username,
+            "first_name": s.first_name,
+            "last_name": s.last_name,
+            "email": s.email,
+            "phone_number": s.phone_number,
+            "student_id": s.student_id,
+            "gender": s.gender,
+            "date_of_birth": s.date_of_birth,
+            "school_name": s.school_name,
+            "region": s.region,
+            "zone": s.zone,
+            "subcity": s.subcity,
+            "woreda": s.woreda,
+            "grade_levels": s.grade_levels,
+            "profile_picture_url": s.profile_picture_url
+        })
+    return {"students": result}
