@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Form, UploadFile, File
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from sqlalchemy import or_
+from typing import Optional
+import os
 
 from app.models.user import User
 from app.db.session import get_db
@@ -14,17 +16,7 @@ router = APIRouter(prefix="/teachers", tags=["Teachers"])
 def is_filled(value):
     if value is None:
         return False
-    if isinstance(value, list):
-        return len(value) > 0
     return str(value).strip() != ""
-
-
-def normalize_list(value):
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return value
-    return [v.strip() for v in value.split(",") if v.strip()]
 
 
 # =====================================
@@ -58,24 +50,26 @@ def get_teacher_profile(
     )
 
     return {
-        "teacher_id": current_user.teacher_id,
-        "gender": current_user.gender,
-        "date_of_birth": current_user.date_of_birth,
-        "school_name": current_user.school_name,
-        "region": current_user.region,
-        "zone": current_user.zone,
-        "subcity": current_user.subcity,
-        "woreda": current_user.woreda,
-        "years_of_experience": current_user.years_of_experience,
-        "subjects_taught": normalize_list(current_user.subjects_taught),
-        "grade_levels": normalize_list(current_user.grade_levels),
-        "profile_picture_url": current_user.profile_picture_url,
-        "profile_completed": profile_completed,
-    }
+    "first_name": current_user.first_name,
+    "last_name": current_user.last_name,
+    "teacher_id": current_user.teacher_id,
+    "gender": current_user.gender,
+    "date_of_birth": current_user.date_of_birth,
+    "school_name": current_user.school_name,
+    "region": current_user.region,
+    "zone": current_user.zone,
+    "subcity": current_user.subcity,
+    "woreda": current_user.woreda,
+    "years_of_experience": current_user.years_of_experience,
+    "subjects_taught": current_user.subjects_taught,
+    "grade_levels": current_user.grade_levels,
+    "profile_picture_url": current_user.profile_picture_url,
+    "profile_completed": profile_completed,
+}
 
 
 # =====================================
-# POST teacher profile (FORM DATA) - Enhanced
+# POST teacher profile (FORM DATA)
 # =====================================
 @router.post("/me/profile")
 def update_teacher_profile(
@@ -88,17 +82,15 @@ def update_teacher_profile(
     subcity: Optional[str] = Form(None),
     woreda: Optional[str] = Form(None),
     years_of_experience: Optional[int] = Form(None),
-    subjects_taught: Optional[str] = Form(None),   # comma-separated string
-    grade_level: Optional[str] = Form(None),       # comma-separated string
+    subjects_taught: Optional[str] = Form(None),
+    grade_level: Optional[str] = Form(None),  # single grade
     profile_picture: Optional[UploadFile] = File(None),
-
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if current_user.role != "teacher":
         raise HTTPException(status_code=403, detail="Only teachers allowed")
 
-    # ===== Basic fields =====
     if teacher_id is not None:
         current_user.teacher_id = teacher_id
     if gender is not None:
@@ -117,27 +109,18 @@ def update_teacher_profile(
         current_user.woreda = woreda
     if years_of_experience is not None:
         current_user.years_of_experience = years_of_experience
-
-    # ===== Arrays / Multi-select fields =====
     if subjects_taught is not None:
-        # Normalize and store as comma-separated string
-        current_user.subjects_taught = ",".join(
-            [s.strip() for s in subjects_taught.split(",") if s.strip()]
-        )
+        current_user.subjects_taught = subjects_taught
     if grade_level is not None:
-        current_user.grade_levels = ",".join(
-            [g.strip() for g in grade_level.split(",") if g.strip()]
-        )
+        current_user.grade_levels = grade_level  # single grade
 
-    # ===== Profile picture handling =====
     if profile_picture:
-        import os
         upload_dir = "uploads/teachers"
         os.makedirs(upload_dir, exist_ok=True)
         file_path = os.path.join(upload_dir, f"{current_user.id}_{profile_picture.filename}")
         with open(file_path, "wb") as f:
             f.write(profile_picture.file.read())
-        current_user.profile_picture_url = file_path  # Save the path to DB
+        current_user.profile_picture_url = file_path
 
     db.commit()
     db.refresh(current_user)
@@ -145,4 +128,55 @@ def update_teacher_profile(
     return {
         "message": "Teacher profile updated successfully",
         "profile_completed": True
+    }
+
+
+# =====================================
+# GET STUDENTS (Teacher Access - Single grade)
+# =====================================
+@router.get("/students")
+def get_students_for_teacher(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.role != "teacher":
+        raise HTTPException(status_code=403, detail="Only teachers can access students")
+
+    if not current_user.grade_levels:
+        raise HTTPException(
+            status_code=400,
+            detail="Teacher has no assigned grade level"
+        )
+
+    # Filter students whose grade matches the teacher's grade
+    students = db.query(User).filter(
+        User.role == "student",
+        User.grade_levels == current_user.grade_levels
+    ).all()
+
+    # Prepare response
+    result = []
+    for s in students:
+        result.append({
+            "id": s.id,
+            "username": s.username,
+            "first_name": s.first_name,
+            "last_name": s.last_name,
+            "email": s.email,
+            "phone_number": s.phone_number,
+            "student_id": s.student_id,
+            "gender": s.gender,
+            "date_of_birth": s.date_of_birth,
+            "school_name": s.school_name,
+            "region": s.region,
+            "zone": s.zone,
+            "subcity": s.subcity,
+            "woreda": s.woreda,
+            "grade_levels": s.grade_levels,
+            "profile_picture_url": s.profile_picture_url,
+        })
+
+    return {
+        "teacher_grade": current_user.grade_levels,
+        "students": result
     }

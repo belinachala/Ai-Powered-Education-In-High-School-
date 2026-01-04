@@ -76,6 +76,11 @@ def get_student_profile(
         raise HTTPException(status_code=403, detail="Only students can access this profile")
 
     return {
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
+        "student_id": current_user.teacher_id,
+        "gender": current_user.gender,
+        "date_of_birth": current_user.date_of_birth,
         "profile_completed": current_user.student_id is not None,
         "student_id": current_user.student_id,
         "gender": current_user.gender,

@@ -1,214 +1,244 @@
-import React, { useState, useEffect } from "react";
-import { CheckCircle, XCircle, FileText, Clock, User, Download } from "lucide-react";
-import { BookOpen } from "lucide-react";  // ← Add this
-interface PendingMaterial {
+import React, { useEffect, useState } from "react";
+import {
+  FileText,
+  User,
+  Clock,
+  X,
+} from "lucide-react";
+
+interface Uploader {
+  id: number;
+  first_name: string;
+  last_name: string;
+}
+
+interface Material {
   id: number;
   category: string;
-  stream: string | null;
+  stream: "natural" | "social" | null;
   subject: string;
   file_path: string;
   file_type: string;
-  user_id: number;
   approval: string;
   created_at: string;
-  uploader_username?: string; // Optional: if you join with user
+  uploader: Uploader;
 }
 
-const API_BASE_URL = "http://localhost:8000";
+const API_BASE_URL = "http://127.0.0.1:8000";
 
-const categoryLabels: Record<string, string> = {
-  grade9: "Grade 9",
-  grade10: "Grade 10",
-  grade11: "Grade 11",
-  grade12: "Grade 12",
-  entrance: "Entrance Exam",
-  remedial: "Remedial Program",
-};
+const categories = [
+  { key: "grade9", label: "Grade 9" },
+  { key: "grade10", label: "Grade 10" },
+  { key: "grade11", label: "Grade 11" },
+  { key: "grade12", label: "Grade 12" },
+  { key: "entrance", label: "Entrance Exam" },
+  { key: "remedial", label: "Remedial Program" },
+];
+
+const streamEnabledCategories = [
+  "grade11",
+  "grade12",
+  "entrance",
+  "remedial",
+];
 
 const MaterialReview: React.FC = () => {
-  const [materials, setMaterials] = useState<PendingMaterial[]>([]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [activeCategory, setActiveCategory] = useState("grade9");
+  const [activeStream, setActiveStream] =
+    useState<"natural" | "social">("natural");
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState<number | null>(null);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [openFile, setOpenFile] = useState<Material | null>(null);
 
-  const getAuthToken = () => localStorage.getItem("token") || "";
-
-  const fetchPendingMaterials = async () => {
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/subject-upload/pending`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) throw new Error("Failed to load pending materials");
-
-      const data: PendingMaterial[] = await response.json();
-      setMaterials(data);
-    } catch (err) {
-      setMessage({ type: "error", text: "Failed to load materials." });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const token = localStorage.getItem("token");
 
   useEffect(() => {
-    fetchPendingMaterials();
+    fetch(`${API_BASE_URL}/subject-upload/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        setMaterials(
+          data.materials.filter((m: Material) => m.approval === "pending")
+        );
+        setLoading(false);
+      });
   }, []);
 
-  const handleApproval = async (id: number, action: "approved" | "rejected") => {
+  const handleApproval = async (
+    id: number,
+    action: "approved" | "rejected"
+  ) => {
     setProcessing(id);
-    setMessage(null);
 
-    try {
-      const token = getAuthToken();
-      const response = await fetch(`${API_BASE_URL}/subject-upload/review/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ approval: action }),
-      });
+    await fetch(`${API_BASE_URL}/subject-upload/review/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ approval: action }),
+    });
 
-      if (!response.ok) throw new Error("Action failed");
-
-      setMessage({
-        type: "success",
-        text: `Material ${action === "approved" ? "approved" : "rejected"} successfully!`,
-      });
-
-      // Remove from list
-      setMaterials((prev) => prev.filter((m) => m.id !== id));
-    } catch (err) {
-      setMessage({ type: "error", text: "Action failed. Please try again." });
-    } finally {
-      setProcessing(null);
-    }
+    setMaterials((prev) => prev.filter((m) => m.id !== id));
+    setProcessing(null);
   };
 
-  // Group by category
-  const grouped = materials.reduce((acc, mat) => {
-    const cat = mat.category;
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(mat);
-    return acc;
-  }, {} as Record<string, PendingMaterial[]>);
+  const filteredMaterials = materials.filter((m) => {
+    if (m.category !== activeCategory) return false;
+    if (streamEnabledCategories.includes(activeCategory)) {
+      return m.stream === activeStream;
+    }
+    return true;
+  });
 
-  const categories = Object.keys(grouped);
+  const getViewerUrl = (material: Material) => {
+    const fullUrl = `${API_BASE_URL}/${material.file_path}`;
+    if (material.file_type.toLowerCase() === ".pdf") return fullUrl;
+    return `https://docs.google.com/gview?url=${encodeURIComponent(
+      fullUrl
+    )}&embedded=true`;
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-purple-100 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-pink-100 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-4">
-            Material Review Dashboard
-          </h1>
-          <p className="text-xl text-purple-700">Review and approve learning materials for students</p>
+
+        {/* CATEGORY MENU */}
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
+          {categories.map((c) => (
+            <button
+              key={c.key}
+              onClick={() => setActiveCategory(c.key)}
+              className={`px-6 py-2 rounded-full font-semibold transition ${
+                activeCategory === c.key
+                  ? "bg-purple-600 text-white"
+                  : "bg-white text-purple-700 hover:bg-purple-100"
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
         </div>
 
-        {message && (
-          <div
-            className={`mb-8 p-6 rounded-xl text-center font-semibold ${
-              message.type === "success" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-            }`}
-          >
-            {message.text}
+        {/* STREAM TABS */}
+        {streamEnabledCategories.includes(activeCategory) && (
+          <div className="flex justify-center gap-4 mb-10">
+            {["natural", "social"].map((s) => (
+              <button
+                key={s}
+                onClick={() => setActiveStream(s as any)}
+                className={`px-6 py-2 rounded-full font-semibold ${
+                  activeStream === s
+                    ? "bg-pink-600 text-white"
+                    : "bg-white text-pink-700 hover:bg-pink-100"
+                }`}
+              >
+                {s === "natural" ? "Natural Science" : "Social Science"}
+              </button>
+            ))}
           </div>
         )}
 
+        {/* CONTENT */}
         {loading ? (
-          <div className="text-center py-20">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-purple-600 border-t-transparent"></div>
-            <p className="mt-6 text-purple-700 text-xl">Loading pending materials...</p>
-          </div>
-        ) : categories.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-3xl shadow-2xl">
-            <Clock size={80} className="mx-auto text-purple-500 mb-6" />
-            <p className="text-2xl font-bold text-purple-800">No pending materials</p>
-            <p className="text-purple-600 mt-4">All materials are up to date!</p>
+          <div className="text-center py-20">Loading...</div>
+        ) : filteredMaterials.length === 0 ? (
+          <div className="text-center py-20 bg-white rounded-3xl shadow">
+            No pending materials
           </div>
         ) : (
-          <div className="space-y-12">
-            {categories.map((cat) => (
-              <div key={cat} className="bg-white rounded-3xl shadow-2xl border-2 border-purple-200 overflow-hidden">
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">
-                  <h2 className="text-2xl font-bold flex items-center gap-3">
-                    <BookOpen size={32} />
-                    {categoryLabels[cat] || cat}
-                    {grouped[cat][0]?.stream && (
-                      <span className="ml-4 text-lg font-normal">
-                        ({grouped[cat][0].stream === "natural" ? "Natural Science" : "Social Science"})
-                      </span>
-                    )}
-                  </h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            {filteredMaterials.map((m) => (
+              <div
+                key={m.id}
+                className="bg-white rounded-3xl shadow-xl p-6"
+              >
+                <div className="flex gap-3 mb-4">
+                  <FileText className="text-purple-600" size={32} />
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-800">
+                      {m.subject}
+                    </h3>
+                    <p className="text-sm text-purple-600">
+                      {m.file_type.toUpperCase()}
+                    </p>
+                  </div>
                 </div>
 
-                <div className="p-8">
-                  <div className="grid md:grid-cols-2 gap-8">
-                    {grouped[cat].map((material) => (
-                      <div
-                        key={material.id}
-                        className="border-2 border-purple-200 rounded-2xl p-6 hover:border-purple-400 transition-all"
-                      >
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <FileText size={36} className="text-purple-600" />
-                            <div>
-                              <h3 className="font-bold text-xl text-purple-800">{material.subject}</h3>
-                              <p className="text-sm text-purple-600">{material.file_type.toUpperCase()} file</p>
-                            </div>
-                          </div>
-                          <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-semibold">
-                            Pending
-                          </span>
-                        </div>
+                {/* Uploader */}
+                <div className="text-sm text-gray-600 space-y-2 mb-6">
+                  <p className="flex gap-2 items-center">
+                    <User size={16} />
+                    <strong>
+                      Mr {m.uploader.first_name} {m.uploader.last_name}
+                    </strong>
+                  </p>
+                  <p className="flex gap-2 items-center">
+                    <Clock size={16} />
+                    {new Date(m.created_at).toLocaleDateString()}
+                  </p>
+                </div>
 
-                        <div className="text-sm text-gray-600 space-y-2 mb-6">
-                          <p className="flex items-center gap-2">
-                            <User size={18} />
-                            Uploaded by: Teacher ID {material.user_id}
-                          </p>
-                          <p className="flex items-center gap-2">
-                            <Clock size={18} />
-                            {new Date(material.created_at).toLocaleDateString()}
-                          </p>
-                        </div>
+                {/* OPEN / DOWNLOAD */}
+                <div className="flex gap-3 mb-4">
+                  <button
+                    onClick={() => setOpenFile(m)}
+                    className="flex-1 py-2 rounded-full bg-blue-600 text-white font-semibold"
+                  >
+                    Open
+                  </button>
 
-                        <div className="flex gap-4">
-                          <button
-                            onClick={() => handleApproval(material.id, "approved")}
-                            disabled={processing === material.id}
-                            className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-70"
-                          >
-                            <CheckCircle size={24} />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleApproval(material.id, "rejected")}
-                            disabled={processing === material.id}
-                            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg disabled:opacity-70"
-                          >
-                            <XCircle size={24} />
-                            Reject
-                          </button>
-                        </div>
+                  <a
+                    href={`${API_BASE_URL}/${m.file_path}`}
+                    download
+                    className="flex-1 py-2 rounded-full bg-indigo-600 text-white font-semibold text-center"
+                  >
+                    Download
+                  </a>
+                </div>
 
-                        <a
-                          href={`${API_BASE_URL}${material.file_path.replace("uploads", "/uploads")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block mt-4 text-center text-purple-600 hover:text-purple-800 underline text-sm flex items-center justify-center gap-2"
-                        >
-                          <Download size={18} />
-                          Preview File
-                        </a>
-                      </div>
-                    ))}
-                  </div>
+                {/* APPROVAL */}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => handleApproval(m.id, "approved")}
+                    disabled={processing === m.id}
+                    className="flex-1 py-2 rounded-full bg-green-600 text-white font-semibold"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    onClick={() => handleApproval(m.id, "rejected")}
+                    disabled={processing === m.id}
+                    className="flex-1 py-2 rounded-full bg-red-600 text-white font-semibold"
+                  >
+                    Reject
+                  </button>
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* MODAL */}
+        {openFile && (
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+            <div className="relative w-11/12 md:w-3/4 lg:w-2/3 h-5/6 bg-white rounded-2xl shadow-xl overflow-hidden">
+              <button
+                onClick={() => setOpenFile(null)}
+                className="absolute top-4 right-4 p-2 rounded-full bg-gray-200 hover:bg-gray-300"
+              >
+                <X size={24} />
+              </button>
+
+              <iframe
+                src={getViewerUrl(openFile)}
+                title={openFile.subject}
+                className="w-full h-full"
+                frameBorder="0"
+              />
+            </div>
           </div>
         )}
       </div>

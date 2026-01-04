@@ -151,11 +151,7 @@ const HighSchoolDirectorStudents: React.FC = () => {
 
   /* ================= UI ================= */
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-3xl font-bold text-blue-800 mb-6 text-center">
-        Students Management
-      </h2>
-
+    <div className="p-2 bg-gray-100 min-h-screen"> 
       {/* Search */}
       <div className="max-w-md mx-auto mb-6">
         <input

@@ -221,21 +221,7 @@ const TeacherUploadForm: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-100 via-pink-50 to-purple-100 p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-4">
-            <div className="p-4 bg-purple-600 rounded-full shadow-2xl animate-pulse">
-              <BookOpen size={40} className="text-white" />
-            </div>
-          </div>
-          <h3 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-3">
-            Teacher Upload Center
-          </h3>
-          <p className="text-lg text-purple-700 font-medium">
-            Upload subject materials (PDF, PPT, DOC, DOCX) for students
-          </p>
-        </div>
-
+        
         {/* Form Card */}
         <div className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-purple-200">
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-6 text-white">

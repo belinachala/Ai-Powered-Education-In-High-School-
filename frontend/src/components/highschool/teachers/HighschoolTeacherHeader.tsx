@@ -27,8 +27,12 @@ const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(res => {
-        const { teacher_id, profile_picture_url } = res.data;
-        setFullName(teacher_id || "Teacher"); // You can adjust to first_name + last_name if available
+        const { first_name, last_name, profile_picture_url } = res.data;
+
+        // Display first + last name
+        setFullName(`${first_name || ""} ${last_name || ""}`.trim() || "Teacher");
+
+        // Set profile picture
         if (profile_picture_url) {
           setProfileImage(`${API_BASE_URL}/${profile_picture_url}`);
         }

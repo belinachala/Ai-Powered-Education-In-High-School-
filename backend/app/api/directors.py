@@ -81,6 +81,8 @@ def get_director_profile(
         raise HTTPException(status_code=403, detail="Only directors can access this profile")
 
     return {
+        "first_name": current_user.first_name,
+        "last_name": current_user.last_name,
         "profile_completed": current_user.director_id is not None,
         "director_id": current_user.director_id,
         "gender": current_user.gender,
