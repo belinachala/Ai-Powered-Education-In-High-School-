@@ -1,443 +1,555 @@
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  FileText,
-  Edit3,
-  Trash2,
-  Eye,
-  CheckCircle,
-  XCircle,
-  ArrowUpDown,
-  Search
-} from "lucide-react";
+import axios from "axios";
+import { Eye, Loader2, Search } from "lucide-react";
 
-type ApprovalStatus = "not_requested" | "pending" | "approved" | "rejected";
-type Category = "free" | "paid";
+/**
+ * TeacherMyExam.tsx
+ * - Safe, robust UI for listing exams and editing questions.
+ * - Requirements:
+ *   - Backend endpoints:
+ *       GET  /free-exams/                -> list of exams
+ *       GET  /free-exams/{id}           -> exam detail (including questions)
+ *       PATCH /free-exams/{examId}/questions/{questionId} -> update question
+ *   - Auth token (if required) at localStorage.token (Bearer)
+ *   - Optional runtime override: window.__API_BASE_URL = "http://localhost:8000"
+ */
 
-type QAItem = {
-  id: string;
-  question: string;
-  choices: [string, string, string, string];
-  correctOption: "A" | "B" | "C" | "D" | "";
-  sourceFile?: string;
+/* -------------------- Config -------------------- */
+// Only use window override to avoid build/runtime bundler issues.
+// If you need build-time envs, inject them into window.__API_BASE_URL in index.html.
+const API_BASE_URL =
+  typeof window !== "undefined" && (window as any).__API_BASE_URL
+    ? (window as any).__API_BASE_URL
+    : "http://localhost:8000";
+
+const getAuthToken = () => {
+  try {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("token");
+  } catch {
+    return null;
+  }
 };
 
-type StoredFile = {
-  name: string;
-  size?: number;
-  needsServerProcessing?: boolean;
+/* -------------------- Types -------------------- */
+type QuestionType = "MCQ" | "TRUE_FALSE" | "BLANK" | "MATCHING";
+
+type MCQOption = { key: string; text: string };
+type MatchingPair = { position: number; left_text: string; right_text: string };
+
+type QuestionOut = {
+  id: number;
+  client_id?: string | null;
+  type: QuestionType;
+  text?: string | null;
+  answer?: string | null;
+  position: number;
+  mcq_options?: MCQOption[] | null;
+  matching_pairs?: MatchingPair[] | null;
 };
 
-type ExamItem = {
-  id: string;
+type FreeExamSummary = {
+  id: number;
   title: string;
   subject: string;
   grade: string;
-  examType?: string | null;
-  date?: string | null;
-  durationMinutes?: number | null;
-  category: Category;
-  priceInETB?: string | null;
-  paidAgreementAccepted?: boolean | null;
-  approvalRequest?: {
-    directorName?: string;
-    directorEmail?: string;
-    messageToDirector?: string;
-    status?: ApprovalStatus;
-  } | null;
-  questions: QAItem[];
-  files: StoredFile[];
-  published: boolean;
-  createdAt: string;
+  status: string;
+  total_questions: number;
+  start_datetime?: string | null;
+  created_at?: string | null;
 };
 
-const STORAGE_KEY = "ai_exam_platform_exams_v1";
+type FreeExamDetail = FreeExamSummary & {
+  questions: QuestionOut[];
+};
 
-const humanDate = (iso?: string | null) => {
-  if (!iso) return "-";
+/* -------------------- Helpers -------------------- */
+const fmtDate = (iso?: string | null) => {
+  if (!iso) return "—";
   try {
-    const d = new Date(iso);
-    return d.toLocaleDateString();
+    return new Date(iso).toLocaleString();
   } catch {
     return iso;
   }
 };
 
-const sampleExams = (): ExamItem[] => [
-  {
-    id: "demo-1",
-    title: "Mathematics Mid 1 - Algebra (MCQ)",
-    subject: "Mathematics",
-    grade: "12",
-    examType: "Mid1",
-    date: "2025-02-15",
-    durationMinutes: 90,
-    category: "free",
-    priceInETB: null,
-    paidAgreementAccepted: null,
-    approvalRequest: null,
-    questions: [
-      { id: "q1", question: "What is the value of x if 2x + 3 = 11?", choices: ["4", "5", "3", "6"], correctOption: "A" },
-      { id: "q2", question: "Factorize x^2 - 5x + 6.", choices: ["(x-2)(x-3)", "(x+2)(x+3)", "(x-1)(x-6)", "(x-3)(x-2)"], correctOption: "A" }
-    ],
-    files: [{ name: "algebra-mid1.pdf", size: 102400 }],
-    published: true,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "demo-2",
-    title: "Physics Final - Mechanics (MCQ)",
-    subject: "Physics",
-    grade: "11",
-    examType: "Final1",
-    date: "2025-03-10",
-    durationMinutes: 120,
-    category: "paid",
-    priceInETB: "200",
-    paidAgreementAccepted: true,
-    approvalRequest: {
-      directorName: "Dr. Gebre",
-      directorEmail: "director@school.edu.et",
-      messageToDirector: "Please approve publishing this paid exam.",
-      status: "approved"
-    },
-    questions: [
-      { id: "q1", question: "Which law states F = ma?", choices: ["Newton's Second Law", "Newton's First Law", "Newton's Third Law", "Law of Gravitation"], correctOption: "A" },
-      { id: "q2", question: "What remains conserved in a closed system?", choices: ["Momentum", "Temperature", "Entropy", "Charge (only)"], correctOption: "A" }
-    ],
-    files: [{ name: "physics-final-mechanics.pdf", size: 204800 }],
-    published: false,
-    createdAt: new Date().toISOString()
-  }
-];
-
-const useStoredExams = () => {
-  const [exams, setExams] = useState<ExamItem[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) {
-        const seeds = sampleExams();
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(seeds));
-        return seeds;
-      }
-      return JSON.parse(raw) as ExamItem[];
-    } catch {
-      const seeds = sampleExams();
-      return seeds;
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(exams));
-    } catch {
-      // ignore
-    }
-  }, [exams]);
-
-  return { exams, setExams };
+const statusBadge = (status?: string) => {
+  const s = (status || "").toLowerCase();
+  if (s === "approved") return "bg-green-100 text-green-800";
+  if (s === "pending_approval" || s === "pending") return "bg-yellow-100 text-yellow-800";
+  if (s === "rejected") return "bg-red-100 text-red-800";
+  return "bg-indigo-100 text-indigo-800";
 };
 
-const Badge: React.FC<{ category: Category; approval?: ApprovalStatus | null; published?: boolean }> = ({ category, approval, published }) => {
-  if (category === "free") {
-    return <span className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-green-50 text-green-700 text-xs font-semibold">Free</span>;
-  }
-  return (
-    <div className="flex items-center gap-2">
-      <span className="inline-flex items-center gap-2 px-2 py-1 rounded-full bg-amber-50 text-amber-800 text-xs font-semibold">Paid</span>
-      {approval === "approved" ? <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 rounded-full px-2 py-1">Approved</span> : approval === "pending" ? <span className="inline-flex items-center gap-1 text-xs text-yellow-700 bg-yellow-50 rounded-full px-2 py-1">Pending</span> : approval === "rejected" ? <span className="inline-flex items-center gap-1 text-xs text-red-700 bg-red-50 rounded-full px-2 py-1">Rejected</span> : <span className="inline-flex items-center gap-1 text-xs text-gray-700 bg-gray-100 rounded-full px-2 py-1">No Request</span>}
-      {published ? <span className="ml-2 inline-flex items-center gap-1 text-xs text-white bg-indigo-600 rounded-full px-2 py-1">Published</span> : null}
-    </div>
-  );
-};
-
+/* -------------------- Component -------------------- */
 const TeacherMyExam: React.FC = () => {
-  const { exams, setExams } = useStoredExams();
+  const [exams, setExams] = useState<FreeExamSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const [query, setQuery] = useState("");
-  const [gradeFilter, setGradeFilter] = useState<string>("all");
-  const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [sortAsc, setSortAsc] = useState<boolean | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
-  const [viewing, setViewing] = useState<ExamItem | null>(null);
-  const [editing, setEditing] = useState<ExamItem | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [selectedExam, setSelectedExam] = useState<FreeExamDetail | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
 
-  const allSubjects = useMemo(() => {
-    const s = new Set<string>();
-    exams.forEach((ex) => ex.subject && s.add(ex.subject));
-    return Array.from(s).sort();
-  }, [exams]);
+  // Editing state
+  const [editingQuestionId, setEditingQuestionId] = useState<number | null>(null);
+  const [editModel, setEditModel] = useState<any>(null);
 
-  const filtered = useMemo(() => {
-    let list = [...exams];
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      list = list.filter((e) => `${e.title} ${e.subject} ${e.grade}`.toLowerCase().includes(q));
+  // Fetch exam list on mount
+  useEffect(() => {
+    let cancelled = false;
+    const fetchList = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = getAuthToken();
+        const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+        const resp = await axios.get(`${API_BASE_URL}/free-exams/`, { headers, timeout: 8000 });
+        const data = resp.data;
+        const list: any[] = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.results)
+          ? data.results
+          : [];
+        const normalized = list.map((it: any) => ({
+          id: Number(it.id),
+          title: it.title ?? "Untitled",
+          subject: it.subject ?? "Unknown",
+          grade: it.grade ?? "N/A",
+          status: it.status ?? "unknown",
+          total_questions: Number(it.total_questions ?? it.totalQuestions ?? 0),
+          start_datetime: it.start_datetime ?? it.created_at ?? null,
+          created_at: it.created_at ?? null,
+        })) as FreeExamSummary[];
+        if (!cancelled) setExams(normalized);
+      } catch (err: any) {
+        console.error("Failed to fetch exams", err);
+        if (!cancelled) {
+          setError(err?.response?.data?.detail ?? "Failed to load exams from server");
+          setExams([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchList();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Open exam detail (fetch)
+  const openDetail = async (examId: number) => {
+    setSelectedExam(null);
+    setDetailError(null);
+    setDetailLoading(true);
+    setModalOpen(true);
+    try {
+      const token = getAuthToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+      const resp = await axios.get<FreeExamDetail>(`${API_BASE_URL}/free-exams/${examId}`, { headers, timeout: 8000 });
+      // Ensure questions sorted by position for UI consistency
+      const exam = resp.data;
+      exam.questions = (exam.questions ?? []).slice().sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      setSelectedExam(exam);
+    } catch (err: any) {
+      console.error("Failed to fetch exam detail", err);
+      setDetailError(err?.response?.data?.detail ?? "Failed to load exam details");
+      setModalOpen(false);
+    } finally {
+      setDetailLoading(false);
     }
-    if (gradeFilter !== "all") list = list.filter((e) => e.grade === gradeFilter);
-    if (subjectFilter !== "all") list = list.filter((e) => e.subject === subjectFilter);
-    if (categoryFilter !== "all") list = list.filter((e) => e.category === (categoryFilter as Category));
-    if (sortAsc !== null) {
-      list.sort((a, b) => {
-        const da = a.date ? new Date(a.date).getTime() : 0;
-        const db = b.date ? new Date(b.date).getTime() : 0;
-        return sortAsc ? da - db : db - da;
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setSelectedExam(null);
+    setDetailError(null);
+    setEditingQuestionId(null);
+    setEditModel(null);
+  };
+
+  const filtered = useMemo(
+    () =>
+      exams
+        .filter((e) =>
+          `${e.title} ${e.subject} ${e.grade}`.toLowerCase().includes(query.trim().toLowerCase())
+        )
+        .filter((e) => (statusFilter ? e.status === statusFilter : true)),
+    [exams, query, statusFilter]
+  );
+
+  /* ---------- Editing helpers ---------- */
+  const beginEdit = (q: QuestionOut) => {
+    setEditingQuestionId(q.id);
+    if (q.type === "MCQ") {
+      const opts: MCQOption[] = (q.mcq_options ?? []).map((o: any) => ({ key: String(o.key), text: String(o.text) }));
+      // ensure A-D present
+      const has = new Set(opts.map((o) => o.key));
+      ["A", "B", "C", "D"].forEach((k) => {
+        if (!has.has(k)) opts.push({ key: k, text: "" });
       });
+      setEditModel({ text: q.text ?? "", answer: q.answer ?? "", mcq_options: opts });
+    } else if (q.type === "MATCHING") {
+      const pairs = (q.matching_pairs ?? []).map((p) => ({ position: p.position ?? 0, left_text: p.left_text ?? "", right_text: p.right_text ?? "" }));
+      setEditModel({ matches: pairs, answer: q.answer ?? "" });
+    } else {
+      setEditModel({ text: q.text ?? "", answer: q.answer ?? "" });
     }
-    return list;
-  }, [exams, query, gradeFilter, subjectFilter, categoryFilter, sortAsc]);
+  };
 
-  const togglePublish = (id: string) => setExams((prev) => prev.map((e) => (e.id === id ? { ...e, published: !e.published } : e)));
-  const removeExam = (id: string) => { setExams((prev) => prev.filter((e) => e.id !== id)); setConfirmDeleteId(null); };
-  const saveEditedExam = (updated: ExamItem) => { setExams((prev) => prev.map((e) => (e.id === updated.id ? { ...updated } : e))); setEditing(null); };
+  const cancelEdit = () => {
+    setEditingQuestionId(null);
+    setEditModel(null);
+  };
 
+  const saveEdit = async (questionId: number) => {
+    if (!selectedExam) return;
+    try {
+      const token = getAuthToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+      const payload: any = {};
+      if (editModel.text !== undefined) payload.text = editModel.text;
+      if (editModel.answer !== undefined) payload.answer = editModel.answer;
+      if (editModel.mcq_options !== undefined) {
+        payload.mcq_options = editModel.mcq_options.map((o: any) => ({ key: o.key, text: o.text }));
+      }
+      if (editModel.matches !== undefined) {
+        // mapping to expected matching_pairs: left_text/right_text
+        payload.matching_pairs = editModel.matches.map((m: any) => ({ left_text: m.left_text, right_text: m.right_text }));
+      }
+
+      const resp = await axios.patch(
+        `${API_BASE_URL}/free-exams/${selectedExam.id}/questions/${questionId}`,
+        payload,
+        { headers, timeout: 8000 }
+      );
+
+      const updatedQuestion: QuestionOut = resp.data;
+      setSelectedExam((prev) => {
+        if (!prev) return prev;
+        const newQs = prev.questions.map((q) => (q.id === updatedQuestion.id ? updatedQuestion : q));
+        return { ...prev, questions: newQs };
+      });
+
+      setEditingQuestionId(null);
+      setEditModel(null);
+    } catch (err: any) {
+      console.error("Failed to save question update", err);
+      alert(err?.response?.data?.detail ?? "Failed to save changes");
+    }
+  };
+
+  /* ---------- Render ---------- */
   return (
-    <div className="max-w-6xl mx-auto p-6">
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 shadow-xl mb-6">
-        <div className="flex items-center gap-4">
-          <div className="bg-white/20 p-3 rounded-full">
-            <FileText className="text-white" aria-hidden="true" />
-          </div>
+    <div className="min-h-screen py-10 bg-gradient-to-b from-sky-50 to-white">
+      <div className="max-w-6xl mx-auto px-4">
+        <header className="flex items-start justify-between mb-8 gap-4">
           <div>
-            <h2 className="text-white text-2xl font-bold">My Exams</h2>
-            <p className="text-indigo-100/90 text-sm mt-1">Manage your created exams — view, edit, publish or remove. Data is stored locally in this demo.</p>
+            <h1 className="text-3xl font-extrabold text-slate-900">My Created Exams</h1>
+            <p className="text-sm text-slate-600 mt-1">Open an exam to view and edit questions.</p>
           </div>
-        </div>
-      </div>
 
-      <div className="bg-white rounded-2xl shadow p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-          <div className="flex items-center gap-3 w-full md:w-2/3">
-            <div className="relative flex-1">
-              <label htmlFor="exam-search" className="sr-only">Search exams</label>
-              <Search className="absolute left-3 top-3 text-gray-400" aria-hidden="true" />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input
-                id="exam-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by title, subject, grade..."
-                className="pl-10 pr-3 w-full rounded-xl border border-gray-200 py-2 focus:ring-2 focus:ring-indigo-200"
-                aria-label="Search exams by title, subject or grade"
+                placeholder="Search title / subject / grade"
+                className="pl-9 pr-3 py-2 border rounded-lg shadow-sm w-64"
               />
             </div>
 
-            <button
-              onClick={() => setSortAsc((s) => (s === null ? false : s === false ? true : null))}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
-              title="Toggle sort by date (new/old/none)"
-              aria-label="Toggle sort by date"
+            <select
+              className="px-3 py-2 border rounded-lg"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
             >
-              <ArrowUpDown size={16} aria-hidden="true" /> <span className="text-xs text-gray-600">Sort by Date</span>
-            </button>
-          </div>
-
-          <div className="flex gap-3 items-center">
-            <label htmlFor="grade-filter" className="sr-only">Filter by grade</label>
-            <select id="grade-filter" value={gradeFilter} onChange={(e) => setGradeFilter(e.target.value)} className="rounded-xl border px-3 py-2" aria-label="Filter exams by grade">
-              <option value="all">All grades</option>
-              {Array.from(new Set(exams.map((x) => x.grade))).map((g) => (<option key={g} value={g}>{g}</option>))}
-            </select>
-
-            <label htmlFor="subject-filter" className="sr-only">Filter by subject</label>
-            <select id="subject-filter" value={subjectFilter} onChange={(e) => setSubjectFilter(e.target.value)} className="rounded-xl border px-3 py-2" aria-label="Filter exams by subject">
-              <option value="all">All subjects</option>
-              {allSubjects.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-
-            <label htmlFor="category-filter" className="sr-only">Filter by category</label>
-            <select id="category-filter" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="rounded-xl border px-3 py-2" aria-label="Filter exams by category">
-              <option value="all">All categories</option>
-              <option value="free">Free</option>
-              <option value="paid">Paid</option>
+              <option value="">All</option>
+              <option value="pending_approval">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="draft">Draft</option>
             </select>
           </div>
-        </div>
-      </div>
+        </header>
 
-      <div className="bg-white rounded-2xl shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs text-gray-500">#</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500">Exam Title</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500">Subject</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500">Grade</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500">Date</th>
-              <th className="px-4 py-3 text-left text-xs text-gray-500">Category / Status</th>
-              <th className="px-4 py-3 text-center text-xs text-gray-500">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={7} className="text-center p-8 text-gray-500">No exams found.</td>
-              </tr>
-            )}
-
-            {filtered.map((exam, idx) => (
-              <tr key={exam.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm text-gray-600">{idx + 1}</td>
-                <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800">{exam.title}</div>
-                  <div className="text-xs text-gray-500 mt-1">Created {new Date(exam.createdAt).toLocaleDateString()}</div>
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">{exam.subject}</td>
-                <td className="px-4 py-3 text-sm text-gray-700">{exam.grade}</td>
-                <td className="px-4 py-3 text-sm text-gray-700">{humanDate(exam.date)}</td>
-                <td className="px-4 py-3">
-                  <Badge category={exam.category} approval={exam.approvalRequest?.status ?? null} published={exam.published} />
-                  {exam.category === "paid" && exam.priceInETB && <div className="text-xs text-gray-500 mt-1">ETB {exam.priceInETB}</div>}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      title={`View ${exam.title}`}
-                      aria-label={`View exam details for ${exam.title}`}
-                      onClick={() => setViewing(exam)}
-                      className="text-indigo-600 hover:text-indigo-800"
-                    >
-                      <Eye aria-hidden="true" />
-                    </button>
-
-                    <button
-                      title={`Edit ${exam.title}`}
-                      aria-label={`Edit exam ${exam.title}`}
-                      onClick={() => setEditing(exam)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <Edit3 aria-hidden="true" />
-                    </button>
-
-                    <button
-                      title={exam.published ? `Unpublish ${exam.title}` : `Publish ${exam.title}`}
-                      aria-label={exam.published ? `Unpublish exam ${exam.title}` : `Publish exam ${exam.title}`}
-                      onClick={() => togglePublish(exam.id)}
-                      className="text-green-600 hover:text-green-800"
-                    >
-                      <CheckCircle aria-hidden="true" />
-                    </button>
-
-                    <button
-                      title={`Delete ${exam.title}`}
-                      aria-label={`Delete exam ${exam.title}`}
-                      onClick={() => setConfirmDeleteId(exam.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 aria-hidden="true" />
-                    </button>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
+          </div>
+        ) : error ? (
+          <div className="bg-red-50 text-red-800 p-4 rounded-md">{error}</div>
+        ) : filtered.length === 0 ? (
+          <div className="bg-white p-8 rounded-md text-center">No exams found.</div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filtered.map((ex) => (
+              <div key={ex.id} className="bg-white rounded-xl shadow p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h2 className="text-lg font-semibold text-slate-800">{ex.title}</h2>
+                      <p className="text-sm text-slate-500 mt-1">{ex.subject} • Grade {ex.grade}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs ${statusBadge(ex.status)}`}>
+                      {ex.status.replace("_", " ").toUpperCase()}
+                    </span>
                   </div>
-                </td>
-              </tr>
+
+                  <div className="mt-3 text-sm text-slate-600">
+                    <div>Total items: <strong>{ex.total_questions}</strong></div>
+                    <div className="mt-1">Start: <strong>{fmtDate(ex.start_datetime)}</strong></div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => openDetail(ex.id)}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                  >
+                    <Eye size={14} /> View
+                  </button>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
 
-      {/* View modal */}
-      {viewing && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`Exam details for ${viewing.title}`}>
-          <div className="bg-white rounded-xl w-full max-w-3xl shadow-xl overflow-auto max-h-[90vh]">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">{viewing.title}</h3>
-              <div className="flex items-center gap-3">
-                <button onClick={() => setViewing(null)} className="text-gray-600 hover:text-gray-800" title="Close details" aria-label="Close exam details">
-                  <XCircle aria-hidden="true" />
-                </button>
+      {/* Detail modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
+          <div className="relative max-w-4xl w-full bg-white rounded-2xl shadow-2xl overflow-auto max-h-[85vh]">
+            <div className="p-4 border-b flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold">{selectedExam?.title ?? "Exam details"}</h3>
+                <p className="text-sm text-slate-500">{selectedExam ? `${selectedExam.subject} • Grade ${selectedExam.grade}` : ""}</p>
               </div>
+              <button onClick={closeModal} className="px-3 py-1 border rounded">Close</button>
             </div>
 
-            <div className="p-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-sm text-gray-500">Subject</div>
-                  <div className="font-medium text-gray-800">{viewing.subject}</div>
+            <div className="p-4 space-y-4">
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="animate-spin h-8 w-8 text-indigo-600" />
                 </div>
-                <div>
-                  <div className="text-sm text-gray-500">Grade / Type</div>
-                  <div className="font-medium text-gray-800">{viewing.grade} {viewing.examType ? `• ${viewing.examType}` : null}</div>
-                </div>
+              ) : detailError ? (
+                <div className="bg-red-50 text-red-800 p-3 rounded">{detailError}</div>
+              ) : selectedExam ? (
+                <>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                    <div className="p-2 bg-indigo-50 rounded">{selectedExam.status}</div>
+                    <div className="p-2 bg-white border rounded">Start: {fmtDate(selectedExam.start_datetime)}</div>
+                    <div className="p-2 bg-white border rounded">Items: {selectedExam.total_questions}</div>
+                  </div>
 
-                <div>
-                  <div className="text-sm text-gray-500">Date</div>
-                  <div className="font-medium text-gray-800">{humanDate(viewing.date)}</div>
-                </div>
-
-                <div>
-                  <div className="text-sm text-gray-500">Duration</div>
-                  <div className="font-medium text-gray-800">{viewing.durationMinutes ?? "-"} minutes</div>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm text-gray-500">Category & Approval</div>
-                <div className="mt-2"><Badge category={viewing.category} approval={viewing.approvalRequest?.status ?? null} published={viewing.published} /></div>
-                {viewing.category === "paid" && viewing.priceInETB && <div className="text-sm text-gray-600 mt-2">Price: ETB {viewing.priceInETB}</div>}
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Questions ({viewing.questions.length})</h4>
-                <div className="space-y-3">
-                  {viewing.questions.map((q, idx) => (
-                    <div key={q.id} className="p-3 border rounded-lg bg-gray-50">
-                      <div className="text-xs text-gray-500">Q{idx + 1}</div>
-                      <div className="font-medium text-gray-800 mb-2">{q.question}</div>
-                      <div className="grid gap-2">
-                        {(["A", "B", "C", "D"] as const).map((letter, i) => {
-                          const isCorrect = q.correctOption === letter;
+                  <div>
+                    <h4 className="font-semibold">Questions</h4>
+                    <div className="mt-3 space-y-3">
+                      {selectedExam.questions.length === 0 ? (
+                        <div className="p-3 bg-slate-50 rounded">No questions</div>
+                      ) : (
+                        selectedExam.questions.map((q) => {
+                          const isEditing = editingQuestionId === q.id;
                           return (
-                            <div key={letter} className={`flex items-start gap-3 p-2 rounded-md ${isCorrect ? "bg-green-50 border border-green-200" : "bg-white"}`}>
-                              <div className="w-6 flex-shrink-0 font-semibold text-sm">{letter}.</div>
-                              <div className="flex-1 text-sm text-gray-700">{q.choices[i] ?? ""}</div>
-                              {isCorrect && <div className="text-sm text-green-700 font-semibold">Correct</div>}
+                            <div key={q.id} className="p-3 border rounded">
+                              <div className="flex justify-between items-start gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <div className="font-medium text-sm">{q.type}</div>
+                                      {isEditing ? (
+                                        <input
+                                          value={editModel?.text ?? ""}
+                                          onChange={(e) => setEditModel((s: any) => ({ ...s, text: e.target.value }))}
+                                          className="mt-2 w-full border rounded px-2 py-1"
+                                        />
+                                      ) : (
+                                        q.text && <div className="mt-2 text-sm">{q.text}</div>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-slate-400">{q.client_id ?? q.id}</div>
+                                  </div>
+
+                                  {/* MCQ */}
+                                  {q.type === "MCQ" && (
+                                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                      {(isEditing ? (editModel?.mcq_options || []) : (q.mcq_options || [])).map((opt: any, idx: number) => {
+                                        const key = opt.key ?? String.fromCharCode(65 + idx);
+                                        const text = opt.text ?? "";
+                                        const currentAnswer = isEditing ? editModel?.answer : q.answer;
+                                        const isCorrect = (currentAnswer || "").trim() === key;
+                                        return (
+                                          <div key={key + idx} className={`p-2 rounded ${isCorrect ? "bg-green-50" : ""}`}>
+                                            <div className="flex items-center gap-2">
+                                              <div className="font-semibold">{key}.</div>
+                                              {isEditing ? (
+                                                <input
+                                                  value={text}
+                                                  onChange={(e) =>
+                                                    setEditModel((s: any) => {
+                                                      const opts = (s.mcq_options || []).map((o: any) => (o.key === key ? { ...o, text: e.target.value } : o));
+                                                      return { ...s, mcq_options: opts };
+                                                    })
+                                                  }
+                                                  className="flex-1 border rounded px-2 py-1"
+                                                />
+                                              ) : (
+                                                <div className="text-sm">{text}</div>
+                                              )}
+                                              {isEditing ? (
+                                                <select
+                                                  value={editModel?.answer ?? ""}
+                                                  onChange={(e) => setEditModel((s: any) => ({ ...s, answer: e.target.value }))}
+                                                  className="ml-2 border rounded px-2 py-1"
+                                                >
+                                                  <option value="">Select</option>
+                                                  {["A", "B", "C", "D"].map((k) => (
+                                                    <option key={k} value={k}>
+                                                      {k}
+                                                    </option>
+                                                  ))}
+                                                </select>
+                                              ) : isCorrect ? (
+                                                <span className="ml-3 text-xs text-green-700">Correct</span>
+                                              ) : null}
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* TRUE_FALSE */}
+                                  {q.type === "TRUE_FALSE" && (
+                                    <div className="mt-3">
+                                      {isEditing ? (
+                                        <select value={editModel?.answer ?? ""} onChange={(e) => setEditModel((s: any) => ({ ...s, answer: e.target.value }))} className="border rounded px-2 py-1">
+                                          <option value="">Select</option>
+                                          <option value="True">True</option>
+                                          <option value="False">False</option>
+                                        </select>
+                                      ) : (
+                                        <div>Answer: <strong>{q.answer ?? "—"}</strong></div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* BLANK */}
+                                  {q.type === "BLANK" && (
+                                    <div className="mt-3">
+                                      {isEditing ? (
+                                        <input value={editModel?.answer ?? ""} onChange={(e) => setEditModel((s: any) => ({ ...s, answer: e.target.value }))} className="border rounded px-2 py-1 w-full" />
+                                      ) : (
+                                        <div>Answer: <strong>{q.answer ?? "—"}</strong></div>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  {/* MATCHING */}
+                                  {q.type === "MATCHING" && (
+                                    <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                      <div>
+                                        <div className="text-xs text-slate-500 mb-2">Column A</div>
+                                        <div className="space-y-1">
+                                          {(isEditing ? (editModel?.matches || []) : (q.matching_pairs || [])).map((p: any, idx: number) =>
+                                            isEditing ? (
+                                              <input
+                                                key={idx}
+                                                value={p.left_text ?? p.left ?? ""}
+                                                onChange={(e) =>
+                                                  setEditModel((s: any) => {
+                                                    const m = (s.matches || []).map((mp: any, i: number) => (i === idx ? { ...mp, left_text: e.target.value } : mp));
+                                                    return { ...s, matches: m };
+                                                  })
+                                                }
+                                                className="w-full border rounded px-2 py-1"
+                                              />
+                                            ) : (
+                                              <div key={idx} className="text-sm">
+                                                {(p.position ?? idx) + 1}. {p.left_text}
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <div className="text-xs text-slate-500 mb-2">Column B</div>
+                                        <div className="space-y-1">
+                                          {(isEditing ? (editModel?.matches || []) : (q.matching_pairs || [])).map((p: any, idx: number) =>
+                                            isEditing ? (
+                                              <input
+                                                key={idx}
+                                                value={p.right_text ?? p.right ?? ""}
+                                                onChange={(e) =>
+                                                  setEditModel((s: any) => {
+                                                    const m = (s.matches || []).map((mp: any, i: number) => (i === idx ? { ...mp, right_text: e.target.value } : mp));
+                                                    return { ...s, matches: m };
+                                                  })
+                                                }
+                                                className="w-full border rounded px-2 py-1"
+                                              />
+                                            ) : (
+                                              <div key={idx} className="text-sm">
+                                                {String.fromCharCode(65 + (p.position ?? idx))}. {p.right_text}
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      </div>
+
+                                      <div>
+                                        <div className="text-xs text-slate-500 mb-2">Answers</div>
+                                        <div>
+                                          {isEditing ? (
+                                            <input
+                                              value={editModel?.answer ?? ""}
+                                              onChange={(e) => setEditModel((s: any) => ({ ...s, answer: e.target.value }))}
+                                              className="w-full border rounded px-2 py-1"
+                                              placeholder="e.g. A B C"
+                                            />
+                                          ) : (
+                                            ((q.answer ?? "") as string)
+                                              .split(/[\s,]+/)
+                                              .filter(Boolean)
+                                              .map((a, i) => <div key={i}>{i + 1}. {a}</div>)
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="ml-4 flex flex-col gap-2">
+                                  {isEditing ? (
+                                    <>
+                                      <button onClick={() => saveEdit(q.id)} className="px-3 py-1 bg-green-600 text-white rounded">Save</button>
+                                      <button onClick={cancelEdit} className="px-3 py-1 border rounded">Cancel</button>
+                                    </>
+                                  ) : (
+                                    <button onClick={() => beginEdit(q)} className="px-3 py-1 border rounded">Edit</button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           );
-                        })}
-                      </div>
+                        })
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Files</h4>
-                {viewing.files.length === 0 ? (
-                  <div className="text-sm text-gray-500">No files uploaded.</div>
-                ) : (
-                  <ul className="space-y-2">
-                    {viewing.files.map((f, i) => (
-                      <li key={i} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{f.name}</div>
-                          <div className="text-xs text-gray-500">{f.size ? `${Math.round((f.size as number) / 1024)} KB` : ""}{f.needsServerProcessing ? " • Server processing" : ""}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button title={`Download ${f.name}`} aria-label={`Download file ${f.name}`} className="text-indigo-600 hover:text-indigo-800">Download</button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button onClick={() => setViewing(null)} className="px-4 py-2 rounded-lg border hover:bg-gray-50" title="Close" aria-label="Close details">Close</button>
-                <button onClick={() => { setEditing(viewing); setViewing(null); }} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700" title="Edit exam" aria-label={`Edit exam ${viewing.title}`}>Edit</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {editing && <EditModal exam={editing} onCancel={() => setEditing(null)} onSave={(updated) => saveEditedExam(updated)} />}
-
-      {confirmDeleteId && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label="Confirm delete exam">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-lg">
-            <h3 className="text-lg font-semibold">Delete exam?</h3>
-            <p className="text-sm text-gray-600 mt-2">This action will permanently remove the exam from local storage. This cannot be undone in the demo.</p>
-            <div className="mt-4 flex justify-end gap-3">
-              <button onClick={() => setConfirmDeleteId(null)} className="px-4 py-2 rounded-xl border" title="Cancel" aria-label="Cancel delete">Cancel</button>
-              <button onClick={() => removeExam(confirmDeleteId)} className="px-4 py-2 rounded-xl bg-red-600 text-white" title="Delete" aria-label="Confirm delete exam">Delete</button>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -447,134 +559,3 @@ const TeacherMyExam: React.FC = () => {
 };
 
 export default TeacherMyExam;
-
-/* ------------------------------
-   EditModal component (internal)
-   ------------------------------ */
-const EditModal: React.FC<{
-  exam: ExamItem;
-  onCancel: () => void;
-  onSave: (updated: ExamItem) => void;
-}> = ({ exam, onCancel, onSave }) => {
-  const [draft, setDraft] = useState<ExamItem>({ ...exam });
-
-  const updateField = <K extends keyof ExamItem>(k: K, v: ExamItem[K]) => setDraft((d) => ({ ...d, [k]: v }));
-
-  const updateQA = (id: string, key: "question" | "choice" | "correctOption", value: any, choiceIndex?: number) => {
-    setDraft((d) => ({
-      ...d,
-      questions: d.questions.map((q) => {
-        if (q.id !== id) return q;
-        if (key === "question") return { ...q, question: value };
-        if (key === "correctOption") return { ...q, correctOption: value };
-        if (key === "choice" && typeof choiceIndex === "number") {
-          const newChoices = [...q.choices] as [string, string, string, string];
-          newChoices[choiceIndex] = value;
-          return { ...q, choices: newChoices };
-        }
-        return q;
-      })
-    }));
-  };
-
-  const addQA = () => setDraft((d) => ({ ...d, questions: [...d.questions, { id: Math.random().toString(36).slice(2, 9), question: "New multiple choice question", choices: ["", "", "", ""], correctOption: "" }] }));
-
-  const removeQA = (id: string) => setDraft((d) => ({ ...d, questions: d.questions.filter((q) => q.id !== id) }));
-
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={`Edit exam ${exam.title}`}>
-      <div className="bg-white rounded-xl w-full max-w-3xl shadow-xl overflow-auto max-h-[90vh]">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold">Edit: {exam.title}</h3>
-          <div className="flex items-center gap-3">
-            <button onClick={onCancel} className="text-gray-600 hover:text-gray-800" title="Close edit" aria-label="Close edit modal"><XCircle aria-hidden="true" /></button>
-          </div>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div>
-            <label htmlFor="edit-title" className="text-sm text-gray-600 block mb-1">Exam Title</label>
-            <input id="edit-title" value={draft.title} onChange={(e) => updateField("title", e.target.value)} className="w-full rounded-xl border px-3 py-2" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label htmlFor="edit-grade" className="text-sm text-gray-600 block mb-1">Grade</label>
-              <input id="edit-grade" value={draft.grade} onChange={(e) => updateField("grade", e.target.value)} className="w-full rounded-xl border px-3 py-2" />
-            </div>
-
-            <div>
-              <label htmlFor="edit-subject" className="text-sm text-gray-600 block mb-1">Subject</label>
-              <input id="edit-subject" value={draft.subject} onChange={(e) => updateField("subject", e.target.value)} className="w-full rounded-xl border px-3 py-2" />
-            </div>
-
-            <div>
-              <label htmlFor="edit-date" className="text-sm text-gray-600 block mb-1">Exam Date</label>
-              <input id="edit-date" type="date" value={draft.date ?? ""} onChange={(e) => updateField("date", e.target.value ?? null)} className="w-full rounded-xl border px-3 py-2" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <label htmlFor="edit-duration" className="text-sm text-gray-600 block mb-1">Duration (minutes)</label>
-              <input id="edit-duration" type="number" min={10} value={draft.durationMinutes ?? ""} onChange={(e) => updateField("durationMinutes", e.target.value === "" ? null : Number(e.target.value))} className="w-full rounded-xl border px-3 py-2" />
-            </div>
-
-            <div>
-              <label htmlFor="edit-category" className="text-sm text-gray-600 block mb-1">Category</label>
-              <select id="edit-category" value={draft.category} onChange={(e) => updateField("category", e.target.value as Category)} className="w-full rounded-xl border px-3 py-2" aria-label="Edit exam category">
-                <option value="free">Free</option>
-                <option value="paid">Paid</option>
-              </select>
-            </div>
-
-            {draft.category === "paid" ? (
-              <div>
-                <label htmlFor="edit-price" className="text-sm text-gray-600 block mb-1">Price (ETB)</label>
-                <input id="edit-price" value={draft.priceInETB ?? ""} onChange={(e) => updateField("priceInETB", e.target.value)} className="w-full rounded-xl border px-3 py-2" />
-              </div>
-            ) : (<div />)}
-          </div>
-
-          <div>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Questions (MCQ)</h4>
-            <div className="space-y-3">
-              {draft.questions.map((q, idx) => (
-                <div key={q.id} className="p-3 border rounded-lg">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="text-xs text-gray-500">Q{idx + 1}</div>
-                      <input value={q.question} onChange={(e) => updateQA(q.id, "question", e.target.value)} className="w-full rounded-md border px-2 py-1 mt-1" />
-                      <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {(["A", "B", "C", "D"] as const).map((letter, i) => (
-                          <div key={letter} className="flex items-start gap-2">
-                            <input type="radio" name={`correct-${q.id}`} checked={q.correctOption === letter} onChange={() => updateQA(q.id, "correctOption", letter)} className="mt-1" aria-label={`Select ${letter} as correct option for question ${idx + 1}`} />
-                            <div className="flex-1">
-                              <div className="text-xs font-semibold text-gray-600">Option {letter}</div>
-                              <input value={q.choices[i] ?? ""} onChange={(e) => updateQA(q.id, "choice", e.target.value, i)} className="w-full rounded-md border px-2 py-1 mt-1" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <button onClick={() => removeQA(q.id)} className="text-red-600 hover:text-red-800" title={`Remove question ${idx + 1}`} aria-label={`Remove question ${idx + 1}`}><Trash2 aria-hidden="true" /></button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-              <div>
-                <button onClick={addQA} className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg" title="Add MCQ" aria-label="Add MCQ"><FileText aria-hidden="true" /> Add MCQ</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <button onClick={onCancel} className="px-4 py-2 rounded-xl border" title="Cancel" aria-label="Cancel edit">Cancel</button>
-            <button onClick={() => onSave({ ...draft, createdAt: draft.createdAt ?? new Date().toISOString() })} className="px-4 py-2 rounded-xl bg-indigo-600 text-white" title="Save changes" aria-label="Save changes">Save changes</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};

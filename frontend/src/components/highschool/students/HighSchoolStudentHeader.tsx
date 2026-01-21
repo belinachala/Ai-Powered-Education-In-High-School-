@@ -67,6 +67,11 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
     navigate("/h-s-student/settings");
   };
 
+  // NEW: Navigate to notifications page when bell is clicked
+  const goToNotifications = () => {
+    navigate("/h-s-student/notifications");
+  };
+
   return (
     <header className="flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-800 text-white px-4 md:px-6 py-3 md:py-4 shadow-md sticky top-0 z-30 w-full">
       {/* Left Section */}
@@ -95,8 +100,12 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
 
       {/* Right Section */}
       <div className="flex items-center space-x-4 md:space-x-8">
-        {/* Notifications */}
-        <div className="relative cursor-pointer">
+        {/* Notifications - now clickable */}
+        <div
+          className="relative cursor-pointer"
+          onClick={goToNotifications}           // ← Added navigation here
+          title="View Notifications"
+        >
           <FaBell className="text-2xl md:text-3xl hover:text-blue-300 transition" />
           <span className="absolute -top-1 -right-1 bg-red-500 text-xs px-1.5 py-0.5 rounded-full font-bold">
             2

@@ -27,7 +27,7 @@ const HighschoolTeacherSidebar: React.FC = () => {
     { name: "Upload Subjects", icon: <BookOpen size={20} />, path: "/h-s-teacher/upload-subjects" },
     { name: "All Subjects", icon: <BookOpen size={20} />, path: "/h-s-teacher/all-subjects" },
     { name: "Result", icon: <Award size={20} />, path: "/h-s-teacher/result" },
-    { name: "Analytics", icon: <BarChart3 size={20} />, path: "/h-s-teacher/analytics" }, 
+    { name: "Analytics", icon: <BarChart3 size={20} />, path: "/h-s-teacher/analytics" },  
   ];
 
   return (
