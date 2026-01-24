@@ -13,22 +13,31 @@ interface HeaderProps {
   onToggleSidebar: () => void;
 }
 
-const API_BASE_URL = "http://127.0.0.1:8000"; // Your backend URL
+interface AnnouncementNotification {
+  id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  is_read?: boolean;
+}
+
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [fullName, setFullName] = useState("Student");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const navigate = useNavigate();
 
-  // ==========================
-  // Fetch student profile info
-  // ==========================
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
 
+    // ==========================
+    // Fetch student profile
+    // ==========================
     axios
       .get(`${API_BASE_URL}/students/me/profile`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -40,14 +49,30 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
         }
 
         if (data.profile_picture_url) {
-          // Fix Windows-style backslashes in path & add timestamp to prevent caching
           const imgPath = data.profile_picture_url.replaceAll("\\", "/");
-          setProfileImage(`${API_BASE_URL}/${imgPath}?t=${new Date().getTime()}`);
+          setProfileImage(`${API_BASE_URL}/${imgPath}?t=${Date.now()}`);
         }
       })
       .catch(() => {
         setFullName("Student");
         setProfileImage(null);
+      });
+
+    // ==========================
+    // Fetch student notifications
+    // ==========================
+    axios
+      .get(`${API_BASE_URL}/announcements/student`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        const count = (res.data || []).filter(
+          (n: AnnouncementNotification) => !n.is_read
+        ).length;
+        setUnreadCount(count);
+      })
+      .catch((err) => {
+        console.log("Failed to load student notifications:", err);
       });
   }, []);
 
@@ -67,7 +92,6 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
     navigate("/h-s-student/settings");
   };
 
-  // NEW: Navigate to notifications page when bell is clicked
   const goToNotifications = () => {
     navigate("/h-s-student/notifications");
   };
@@ -100,16 +124,18 @@ const HighSchoolStudentHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
 
       {/* Right Section */}
       <div className="flex items-center space-x-4 md:space-x-8">
-        {/* Notifications - now clickable */}
+        {/* Notifications */}
         <div
           className="relative cursor-pointer"
-          onClick={goToNotifications}           // ← Added navigation here
+          onClick={goToNotifications}
           title="View Notifications"
         >
           <FaBell className="text-2xl md:text-3xl hover:text-blue-300 transition" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-xs px-1.5 py-0.5 rounded-full font-bold">
-            2
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-xs px-1.5 py-0.5 rounded-full font-bold">
+              {unreadCount}
+            </span>
+          )}
         </div>
 
         {/* Profile Dropdown */}

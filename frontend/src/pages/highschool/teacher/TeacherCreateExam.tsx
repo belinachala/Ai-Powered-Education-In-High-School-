@@ -47,7 +47,7 @@ const TeacherCreateExam: React.FC = () => {
           className="mb-10 md:mb-14 bg-gradient-to-r from-indigo-600/10 to-blue-600/10 dark:from-indigo-900/30 dark:to-blue-900/20 
                      border border-indigo-200/60 dark:border-indigo-700/40 rounded-2xl p-5 sm:p-6 shadow-sm backdrop-blur-sm"
         >
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-6">
             <div className="p-3 bg-indigo-100 dark:bg-indigo-800/40 rounded-xl flex-shrink-0">
               <Sparkles className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             </div>
@@ -56,7 +56,7 @@ const TeacherCreateExam: React.FC = () => {
                 Welcome Ethiopian Educators! <span className="text-xs bg-indigo-600/80 text-white px-2.5 py-0.5 rounded-full font-medium">New 2026</span>
               </h3>
               <p className="text-indigo-800/90 dark:text-indigo-300 text-base leading-relaxed">
-                Create unlimited <strong>free practice exams</strong> with powerful AI assistance. Save up to 60% time • Ethiopian curriculum aligned • Instant question generation & answer keys.
+                Create unlimited <strong>Free </strong>and <strong>Paid practice exams</strong> with powerful AI assistance. Save up to 80% time • Ethiopian curriculum aligned • Instant question generation & answer keys.
               </p>
             </div>
           </div>
@@ -69,21 +69,16 @@ const TeacherCreateExam: React.FC = () => {
           transition={{ duration: 0.9 }}
           className="text-center mb-14 md:mb-20"
         >
-          <div className="inline-flex items-center justify-center mb-6">
-            <div className="p-5 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-xl">
-              <GraduationCap className="w-16 h-16 md:w-20 md:h-20 text-white" />
-            </div>
-          </div>
+           
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-indigo-950 dark:text-indigo-50 tracking-tight leading-tight">
-            Create Powerful Exams
-            <span className="block mt-2 text-3xl sm:text-4xl md:text-5xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+          <h3 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-indigo-950 dark:text-indigo-50 tracking-tight leading-tight"> 
+            <span className="block mt-2 text-3xl sm:text-2xl md:text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               with Ethiopian AI
             </span>
-          </h1>
+          </h3>
 
           <p className="mt-6 text-lg md:text-xl text-slate-700 dark:text-slate-300 max-w-3xl mx-auto font-medium leading-relaxed">
-            Fast, smart, curriculum-aligned exam builder — designed for Ethiopian high school teachers.
+            Fast, Smart, Curriculum-aligned exam builder — designed for Ethiopian High School and Remedial Program teachers.
           </p>
         </motion.div>
 
@@ -108,24 +103,24 @@ const TeacherCreateExam: React.FC = () => {
               transition={{ delay: 0.4, duration: 0.7 }}
               className="mb-10"
             >
-              <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-2xl group-hover:rotate-6 transition-transform duration-500">
+              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-14 md:h-16 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-2xl group-hover:rotate-6 transition-transform duration-500">
                 <BookOpen className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 text-white" />
               </div>
             </motion.div>
 
-            <h2 className="text-4xl sm:text-5xl font-bold text-indigo-900 dark:text-indigo-50 mb-6">
+            <h4 className="text-4xl sm:text-5xl font-bold text-indigo-900 dark:text-indigo-50 mb-6">
               Free Exam Creator
-            </h2>
+            </h4>
 
-            <p className="text-lg sm:text-xl text-slate-700 dark:text-slate-300 mb-10 max-w-2xl leading-relaxed">
+            <p className="text-lg sm:text-xl text-slate-700 dark:text-slate-300 mb-10 max-w-1xl leading-relaxed">
               Unlimited creation • AI-powered questions • Instant grading keys • Perfect for classroom practice, revision & mock exams — no limits, no payment needed.
             </p>
 
             {/* Feature highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 w-full max-w-3xl">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 w-full max-w-2xl">
               {[
                 { icon: Brain, text: "AI generates questions in seconds" },
-                { icon: GraduationCap, text: "Supports Ethiopian curriculum" },
+                { icon: GraduationCap, text: "Supports Ethiopian New curriculum" },
                 { icon: Sparkles, text: "Beautiful PDFs & sharing" },
               ].map((item, i) => (
                 <motion.div
@@ -151,10 +146,10 @@ const TeacherCreateExam: React.FC = () => {
               whileTap={{ scale: 0.98 }}
               className="inline-block"
             >
-              <span className="inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-blue-600 to-indigo-600 
+              <span className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 
                                hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-xl rounded-2xl shadow-lg transition-all">
                 Start Creating Free Exam
-                <Sparkles className="w-6 h-6" />
+                <Sparkles className="w-3 h-3" />
               </span>
             </motion.div>
           </div>
@@ -165,12 +160,12 @@ const TeacherCreateExam: React.FC = () => {
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-16 md:mt-24 bg-white/60 dark:bg-gray-800/50 backdrop-blur-lg rounded-3xl p-8 md:p-10 shadow-xl border border-indigo-100/50 dark:border-indigo-800/30 text-center max-w-4xl mx-auto"
+          className="mt-16 md:mt-24 bg-white/60 dark:bg-gray-800/50 backdrop-blur-lg rounded-3xl p-6 md:p-7 shadow-xl border border-indigo-100/50 dark:border-indigo-800/30 text-center max-w-4xl mx-auto"
         >
           <Brain className="w-12 h-12 mx-auto mb-6 text-indigo-600 dark:text-indigo-400" />
-          <p className="text-xl md:text-2xl font-semibold text-indigo-900 dark:text-indigo-100 leading-relaxed">
-            Teachers using AI create exams <span className="text-indigo-600 dark:text-indigo-400 font-bold">60% faster</span>  
-            with higher quality questions — start today!
+          <p className="text-xl md:text-1xl font-semibold text-indigo-900 dark:text-indigo-100 leading-relaxed">
+            Teachers using AI create exams <span className="text-indigo-600 dark:text-indigo-400 font-bold">60% faster </span>  
+            with higher quality questions start today!
           </p>
         </motion.div>
 

@@ -1,43 +1,56 @@
+# app/utils/file_utils.py
+
 import os
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 
-# Allowed extensions (lowercase)
-ALLOWED_EXTENSIONS = {".pdf", ".ppt", ".pptx", ".doc", ".docx"}
+# Default allowed extensions for documents (your original)
+DOCUMENT_EXTENSIONS = {".pdf", ".ppt", ".pptx", ".doc", ".docx"}
 
-async def validate_file(file: UploadFile):
+# Allowed extensions for images
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp"}
+
+
+async def validate_file(
+    file: UploadFile,
+    allowed_extensions: set = DOCUMENT_EXTENSIONS,
+    max_size_mb: int = 50
+) -> bool:
     """
-    Validate uploaded file by extension and size (async).
-    Raises ValueError if invalid.
+    Validate uploaded file by extension, size, and emptiness.
+    Raises ValueError on failure.
     """
-    if file.filename is None:
-        raise ValueError("No file selected.")
+    if not file.filename:
+        raise ValueError("No file selected or filename missing.")
 
-    # Get file extension
+    # Get extension
     _, ext = os.path.splitext(file.filename)
     ext = ext.lower()
 
-    if ext not in ALLOWED_EXTENSIONS:
-        raise ValueError("Invalid file type. Allowed: PDF, PPT, PPTX, DOC, DOCX")
+    if ext not in allowed_extensions:
+        allowed_str = ", ".join(e.lstrip(".") for e in sorted(allowed_extensions))
+        raise ValueError(f"Invalid file type. Allowed: {allowed_str.upper()}")
 
-    # Read content asynchronously for size check
-    MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+    # Size limit (stream read to avoid memory issues with large files)
+    MAX_SIZE = max_size_mb * 1024 * 1024
     content = await file.read()
     if len(content) > MAX_SIZE:
-        raise ValueError("File too large. Maximum size is 50 MB.")
+        raise ValueError(f"File too large. Maximum size is {max_size_mb} MB.")
     if len(content) == 0:
         raise ValueError("File is empty.")
 
-    # IMPORTANT: Reset the file pointer so the service can read it again
+    # Reset pointer so service can read the file again
     await file.seek(0)
 
     return True
 
+
 def get_file_extension(filename: str) -> str:
     """
-    Return extension with dot (e.g., '.pdf')
+    Return extension with dot (e.g., '.jpg')
     """
     _, ext = os.path.splitext(filename)
-    return ext.lower() if ext else ".pdf"
+    return ext.lower() if ext else ""
+
 
 def generate_file_path(category: str, stream: str | None, filename: str) -> str:
     """
@@ -52,5 +65,8 @@ def generate_file_path(category: str, stream: str | None, filename: str) -> str:
     else:
         subfolder = category
 
-    full_path = os.path.join(base_path, subfolder, filename)
+    # For images: optional subfolder separation
+    # full_path = os.path.join(base_path, subfolder, "images", filename)
+    full_path = os.path.join(base_path, subfolder, filename)  # same as documents
+
     return full_path

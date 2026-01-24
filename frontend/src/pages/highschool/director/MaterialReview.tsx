@@ -158,9 +158,9 @@ const MaterialReview: React.FC = () => {
                 <div className="flex gap-3 mb-4">
                   <FileText className="text-purple-600" size={32} />
                   <div>
-                    <h3 className="text-xl font-bold text-purple-800">
+                    <h5 className="text-xl font-bold text-purple-800">
                       {m.subject}
-                    </h3>
+                    </h5>
                     <p className="text-sm text-purple-600">
                       {m.file_type.toUpperCase()}
                     </p>

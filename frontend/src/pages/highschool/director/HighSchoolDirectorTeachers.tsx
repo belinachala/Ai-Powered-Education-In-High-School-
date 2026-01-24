@@ -180,13 +180,13 @@ const HighSchoolDirectorTeachers: React.FC = () => {
             >
               <img
                 src={t.profile_picture_url || "/assets/default-avatar.png"}
-                className="w-32 h-32 object-cover border-4 border-blue-500 rounded-xl mb-3"
+                className="w-46 h-46 object-cover border-4 border-blue-500 rounded-xl mb-3"
               />
 
-              <h3 className="text-xl font-bold text-blue-700">
-                {t.first_name} {t.last_name}
-              </h3>
-              <p className="text-sm text-gray-600">ID: {t.teacher_id}</p>
+              <h5 className="text-xl font-bold text-blue-700">
+                Mr {t.first_name} {t.last_name}
+              </h5>
+              <h5 className="text-sm text-gray-600">Grade: {t.grade_levels} Teacher</h5>
 
               <div className="flex gap-2 mt-4">
                 <button

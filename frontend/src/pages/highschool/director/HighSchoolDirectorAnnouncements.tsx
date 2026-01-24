@@ -166,7 +166,7 @@ const HighSchoolDirectorAnnouncements: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-6">
       <div className="max-w-5xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -184,10 +184,10 @@ const HighSchoolDirectorAnnouncements: React.FC = () => {
           className="bg-white rounded-3xl shadow-2xl border border-purple-200 overflow-hidden"
         >
           <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-8 text-white">
-            <h2 className="text-3xl font-bold flex items-center gap-3">
+            <h4 className="text-3xl font-bold flex items-center gap-3">
               <BookOpen size={32} />
               Create New Announcement
-            </h2>
+            </h4>
           </div>
 
           <form onSubmit={handleSubmit} className="p-8 space-y-9">
@@ -404,10 +404,10 @@ const HighSchoolDirectorAnnouncements: React.FC = () => {
 
         {/* Published Announcements List */}
         <div className="mt-16 space-y-8">
-          <h2 className="text-3xl font-bold text-gray-800 text-center md:text-left flex items-center gap-4">
+          <h4 className="text-3xl font-bold text-gray-800 text-center md:text-left flex items-center gap-4">
             <Megaphone size={36} className="text-purple-600" />
             Published Announcements
-          </h2>
+          </h4>
 
           {announcements.length === 0 ? (
             <div className="bg-white rounded-2xl p-12 text-center text-gray-600 shadow border border-purple-100">
@@ -428,7 +428,7 @@ const HighSchoolDirectorAnnouncements: React.FC = () => {
               >
                 <div className="flex flex-col sm:flex-row justify-between gap-5 mb-6">
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">{ann.title}</h3>
+                    <h5 className="text-2xl font-bold text-gray-900">{ann.title}</h5>
                     <p className="text-sm text-gray-600 mt-1">
                       {ann.created_at ? new Date(ann.created_at).toLocaleString() : "Just now"}
                     </p>

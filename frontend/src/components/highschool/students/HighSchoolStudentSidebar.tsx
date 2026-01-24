@@ -17,9 +17,11 @@ const HighSchoolStudentSidebar: React.FC = () => {
 
   const menuItems = [
     { to: "/h-s-student/dashboard", icon: <FaUser />, label: "Dashboard" }, 
-    { to: "/h-s-student/exams", icon: <FaBook />, label: "My Exams" },
+    { to: "/h-s-student/available-exams", icon: <FaBook />, label: "Available Exams" },
+    { to: "/h-s-student/re-take-exams", icon: <FaBook />, label: "Re Take Exams" },
     { to: "/h-s-student/results", icon: <FaChartLine />, label: "My Results" },
     { to: "/h-s-student/resources", icon: <FaFileAlt />, label: "Learning pdf" },
+    { to: "/h-s-student/images-gallery", icon: <FaFileAlt />, label: "Gallery" },
     { to: "/h-s-student/notifications", icon: <FaBell />, label: "Notifications" },
   ];
 

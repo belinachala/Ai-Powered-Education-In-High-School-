@@ -1,8 +1,4 @@
-// FreeExamCreation.tsx
-// Fully corrected version with "Exam Category" (Free / Paid) selection and badge left of the title.
-// No price field — only category label is added and sent to backend.
-
-import React, { useState } from "react";
+ import React, { useState } from "react";
 import {
   CheckCircle,
   Clock,
@@ -53,11 +49,11 @@ const SUBJECTS: Record<Grade, { common?: string[]; natural?: string[]; social?: 
     social: ["Mathematics", "History", "Geography", "Economics", "English", "Aptitude"],
   },
   Entrance: {
-    natural: ["Mathematics", "Physics", "Biology", "English", "Aptitude"],
+    natural: ["Mathematics", "Physics", "Chemistry","Biology", "English", "Aptitude"],
     social: ["Mathematics", "History", "Geography", "Economics", "English", "Aptitude"],
   },
   Remedial: {
-    natural: ["Mathematics", "Physics", "Biology", "English", "Aptitude"],
+    natural: ["Mathematics", "Physics", "Chemistry","Biology", "English", "Aptitude"],
     social: ["Mathematics", "History", "Geography", "Economics", "English", "Aptitude"],
   },
 };
@@ -315,7 +311,7 @@ const FreeExamCreation: React.FC = () => {
       <div className="max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden relative">
         <button
           onClick={() => navigate(-1)}
-          className="absolute top-6 left-6 z-10 flex items-center gap-2 px-4 py-2 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-indigo-700 transition-all shadow-sm"
+          className="absolute top-1 left-3 z-8 flex items-center gap-2 px-2 py-1 bg-white backdrop-blur-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-100 hover:text-indigo-700 transition-all shadow-sm"
         >
           <ArrowLeft size={18} />
           <span className="font-medium">Back</span>
@@ -323,10 +319,10 @@ const FreeExamCreation: React.FC = () => {
 
         <div className="bg-gradient-to-r from-indigo-700 to-indigo-900 px-8 py-10 text-white">
           <div className="flex items-center gap-4">
-            <CheckCircle size={40} />
-            <h1 className="text-3xl font-bold">Create New Exam</h1>
+            <CheckCircle size={30} />
+            <h4 className="text-3xl font-bold">Create New Exam</h4>
           </div>
-          <p className="mt-2 opacity-90">Date: {today}</p>
+          <h5 className="mt-2 opacity-90">Date: {today}</h5>
         </div>
 
         <div className="p-6 md:p-10 space-y-10">
@@ -335,6 +331,7 @@ const FreeExamCreation: React.FC = () => {
             <div className="flex items-center gap-4">
               {/* Category badge left of title */}
               <div>
+                 <label className="block text-sm font-medium text-gray-700 mb-2">Category : </label>
                 <div
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
                     category === "free" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
@@ -345,6 +342,7 @@ const FreeExamCreation: React.FC = () => {
 
                 {/* toggle */}
                 <div className="mt-2 flex gap-2">
+                  
                   <button
                     onClick={() => setCategory("free")}
                     className={`px-3 py-1 rounded-md text-sm ${category === "free" ? "bg-emerald-600 text-white" : "bg-white border"}`}
@@ -363,7 +361,7 @@ const FreeExamCreation: React.FC = () => {
               </div>
 
               <div className="flex-1">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Title</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Exam Title :</label>
                 <input
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
                   value={examTitle}
@@ -374,7 +372,7 @@ const FreeExamCreation: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type :</label>
               <input
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition"
                 value={examType}

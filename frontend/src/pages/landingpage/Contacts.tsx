@@ -4,30 +4,18 @@ import { motion } from "framer-motion";
 import { Facebook, Twitter, Instagram, Linkedin, Mail, Phone } from "lucide-react";
 
 const Contacts: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<"university" | "highschool">("university");
   const [isFormVisible, setIsFormVisible] = useState(false);
 
   const universityInfo = {
-    website: "https://www.uniai.edu",
-    phone: "+1-123-456-7890",
-    telegram: "https://t.me/uniai",
-    linkedin: "https://www.linkedin.com/company/uniai",
-    address: "123 AI Street, Tech City, CA 94043",
-    lat: 37.422,
-    lng: -122.084,
+    name: "Addis Ababa University",
+    website: "https://www.aau.edu.et",
+    phone: "+251 111 239 780", // General contact (from official sources)
+    telegram: "https://t.me/aau_official", // Official Telegram channel
+    linkedin: "https://www.linkedin.com/school/addis-ababa-university",
+    address: "Addis Ababa University, Main Campus, Sidist Kilo, Addis Ababa, Ethiopia",
+    lat: 9.0413,
+    lng: 38.7555,
   };
-
-  const highschoolInfo = {
-    website: "https://www.hsdigital.edu",
-    phone: "+1-987-654-3210",
-    telegram: "https://t.me/hsdigital",
-    linkedin: "https://www.linkedin.com/company/hsdigital",
-    address: "456 Learn Ave, Edu Town, NY 10001",
-    lat: 40.7128,
-    lng: -74.006,
-  };
-
-  const currentInfo = activeTab === "university" ? universityInfo : highschoolInfo;
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-purple-100 via-white to-purple-50">
@@ -42,33 +30,15 @@ const Contacts: React.FC = () => {
         className="text-center py-12"
       >
         <h2 className="text-5xl font-bold text-purple-700 mb-4">
-          AI-Powered Digital Exam Contact Center
+          Come Brige School Exam Contact Center
         </h2>
         <p className="text-lg text-gray-600">
-          Get in touch with our university or high school support teams.
+          Get in touch with Come Brige School support.
         </p>
       </motion.div>
 
       {/* Main Section */}
       <div className="container mx-auto px-4 md:px-12 flex-grow">
-        {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          {["university", "highschool"].map((tab) => (
-            <motion.button
-              key={tab}
-              onClick={() => setActiveTab(tab as "university" | "highschool")}
-              whileTap={{ scale: 0.95 }}
-              className={`px-6 py-2 text-lg font-semibold transition-all ${
-                activeTab === tab
-                  ? "bg-purple-700 text-white shadow-md"
-                  : "bg-white text-purple-700 border border-purple-300 hover:bg-purple-50"
-              } ${tab === "university" ? "rounded-l-lg" : "rounded-r-lg"}`}
-            >
-              {tab === "university" ? "University Contact" : "High School Contact"}
-            </motion.button>
-          ))}
-        </div>
-
         {/* Contact Card */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -77,45 +47,45 @@ const Contacts: React.FC = () => {
           className="bg-white shadow-2xl rounded-2xl p-8 border border-purple-100"
         >
           <h3 className="text-2xl font-semibold text-center text-purple-800 mb-6">
-            {activeTab === "university" ? "University" : "High School"} Contact Information
+            Come Brige School Contact Information
           </h3>
 
           <ul className="space-y-3 text-gray-700 text-lg">
             <li>
               🌐 <strong>Website:</strong>{" "}
               <a
-                href={currentInfo.website}
+                href={universityInfo.website}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-purple-600 hover:underline"
               >
-                {currentInfo.website}
+                {universityInfo.website}
               </a>
             </li>
-            <li>📞 <strong>Phone:</strong> {currentInfo.phone}</li>
+            <li>📞 <strong>Phone:</strong> {universityInfo.phone}</li>
             <li>
               💬 <strong>Telegram:</strong>{" "}
               <a
-                href={currentInfo.telegram}
+                href={universityInfo.telegram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-purple-600 hover:underline"
               >
-                Visit Telegram
+                Join Telegram Channel
               </a>
             </li>
             <li>
               💼 <strong>LinkedIn:</strong>{" "}
               <a
-                href={currentInfo.linkedin}
+                href={universityInfo.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-purple-600 hover:underline"
               >
-                Visit LinkedIn
+                Visit LinkedIn Page
               </a>
             </li>
-            <li>📍 <strong>Address:</strong> {currentInfo.address}</li>
+            <li>📍 <strong>Address:</strong> {universityInfo.address}</li>
           </ul>
 
           {/* Map */}
@@ -127,7 +97,7 @@ const Contacts: React.FC = () => {
             className="mt-6"
           >
             <iframe
-              src={`https://www.google.com/maps?q=${currentInfo.lat},${currentInfo.lng}&hl=en&z=14&output=embed`}
+              src={`https://www.google.com/maps?q=${universityInfo.lat},${universityInfo.lng}&hl=en&z=15&output=embed`}
               width="100%"
               height="300"
               style={{ border: 0 }}
@@ -205,7 +175,7 @@ const Contacts: React.FC = () => {
         </motion.div>
       </div>
 
-      {/* Footer */}
+      {/* Footer remains unchanged */}
       <footer className="bg-gray-900 text-white py-12 mt-16">
         <div className="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-10">
           {/* About */}

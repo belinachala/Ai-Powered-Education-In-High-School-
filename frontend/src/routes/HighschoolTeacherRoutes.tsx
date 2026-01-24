@@ -11,8 +11,9 @@ import TeacherSetting from "../pages/highschool/teacher/TeacherSetting";
 import TeacherProfile from "../pages/highschool/teacher/TeacherProfile";
 import TeacherUploadForm from "@/pages/highschool/teacher/TeacherUploadForm";
 import FreeExamCreation from "@/pages/highschool/teacher/FreeExamCreation"; 
-import TeacherNotifications from "@/pages/highschool/teacher/TeacherNotifications";
-const HighschoolTeacherRoutes: React.FC = () => {
+import TeacherNotifications from "@/pages/highschool/teacher/TeacherNotifications"; 
+import TeacherUploadImage from "@/pages/highschool/teacher/TeacherUploadImage"; 
+ const HighschoolTeacherRoutes: React.FC = () => {
   return (
     <Routes> 
       <Route path="dashboard" element={<TeacherDashboardHome/>} />
@@ -26,7 +27,9 @@ const HighschoolTeacherRoutes: React.FC = () => {
       <Route path="setting" element={<TeacherSetting />} />
       <Route path="profile" element={<TeacherProfile />} />
       <Route path="upload-subjects" element={<TeacherUploadForm />} />
-      <Route path="notifications" element={<TeacherNotifications />} />
+      <Route path="upload-subject" element={<TeacherUploadImage />} />
+      <Route path="notifications" element={<TeacherNotifications />} /> 
+      
     </Routes>
   );
 };

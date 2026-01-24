@@ -12,6 +12,7 @@ from app.api import free_exams          # ← Added here (plural!)
 from app.api import announcements      # ← announcements router (new)
 from app.api.free_exams import router as free_exams_router 
 import app.models.announcement  # noqa: F401
+from app.api import image_upload
 
 app = FastAPI(title="School Management API")
 
@@ -42,6 +43,6 @@ app.include_router(teachers.router)
 app.include_router(subject_upload.router)
 app.include_router(free_exams.router)       # ← Added here!
 app.include_router(announcements.router)   # ← Announcements endpoints: /announcements/
-
+app.include_router(image_upload.router)
 # Serve uploaded files statically
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads") 

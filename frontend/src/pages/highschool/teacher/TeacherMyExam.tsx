@@ -1,22 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { Eye, Loader2, Search } from "lucide-react";
-
-/**
- * TeacherMyExam.tsx
- * - Safe, robust UI for listing exams and editing questions.
- * - Requirements:
- *   - Backend endpoints:
- *       GET  /free-exams/                -> list of exams
- *       GET  /free-exams/{id}           -> exam detail (including questions)
- *       PATCH /free-exams/{examId}/questions/{questionId} -> update question
- *   - Auth token (if required) at localStorage.token (Bearer)
- *   - Optional runtime override: window.__API_BASE_URL = "http://localhost:8000"
- */
-
-/* -------------------- Config -------------------- */
-// Only use window override to avoid build/runtime bundler issues.
-// If you need build-time envs, inject them into window.__API_BASE_URL in index.html.
+ 
 const API_BASE_URL =
   typeof window !== "undefined" && (window as any).__API_BASE_URL
     ? (window as any).__API_BASE_URL
@@ -253,7 +238,7 @@ const TeacherMyExam: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4">
         <header className="flex items-start justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold text-slate-900">My Created Exams</h1>
+            <h4 className="text-3xl font-extrabold text-slate-900">My Created Exams</h4>
             <p className="text-sm text-slate-600 mt-1">Open an exam to view and edit questions.</p>
           </div>
 
@@ -297,16 +282,16 @@ const TeacherMyExam: React.FC = () => {
                 <div>
                   <div className="flex items-start justify-between">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-800">{ex.title}</h2>
-                      <p className="text-sm text-slate-500 mt-1">{ex.subject} • Grade {ex.grade}</p>
+                      <h6 className="text-lg font-semibold text-slate-800">{ex.title}</h6>
+                      <p className="text-sm text-slate-500 mt-1">{ex.subject} Grade {ex.grade}</p>
                     </div>
                     <span className={`px-2 py-1 rounded-full text-xs ${statusBadge(ex.status)}`}>
-                      {ex.status.replace("_", " ").toUpperCase()}
+                      {ex.status.replace("_", " ").toLowerCase()}
                     </span>
                   </div>
 
                   <div className="mt-3 text-sm text-slate-600">
-                    <div>Total items: <strong>{ex.total_questions}</strong></div>
+                    <div>Total Questions: <strong>{ex.total_questions}</strong></div>
                     <div className="mt-1">Start: <strong>{fmtDate(ex.start_datetime)}</strong></div>
                   </div>
                 </div>

@@ -10,9 +10,9 @@ interface AnnouncementNotification {
   title: string;
   content: string;
   created_at: string;
-  is_read?: boolean;           // managed locally for now
+  is_read?: boolean;
   target_audience: string;
-  target_grades_teachers?: string[];  // which grades this teacher announcement targets
+  target_grades_teachers?: string[];
 }
 
 const TeacherNotifications: React.FC = () => {
@@ -28,7 +28,6 @@ const TeacherNotifications: React.FC = () => {
       navigate("/login");
       return;
     }
-
     fetchNotifications(token);
   }, [navigate]);
 
@@ -37,20 +36,18 @@ const TeacherNotifications: React.FC = () => {
     setError(null);
 
     try {
-      // Assuming backend has teacher-specific endpoint
-      // It should return only announcements where target_audience is "all" or "teachers"
-      // and (no grade filter OR teacher's taught grades match target_grades_teachers)
       const res = await axios.get("http://127.0.0.1:8000/announcements/teacher", {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // Sort newest first
+      // sort newest first
       const sorted = (res.data || []).sort(
-        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        (a: AnnouncementNotification, b: AnnouncementNotification) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
-      // Add local is_read flag (simulation - later use real backend field)
-      const withReadStatus = sorted.map((item: any) => ({
+      // map to include read status
+      const withReadStatus = sorted.map((item) => ({
         ...item,
         is_read: false,
       }));
@@ -66,21 +63,12 @@ const TeacherNotifications: React.FC = () => {
 
   const markAllAsRead = () => {
     setMarkingAll(true);
-
-    // Simulate marking all read (later → call backend endpoint)
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, is_read: true }))
-    );
-
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     setTimeout(() => setMarkingAll(false), 800);
   };
 
   const markAsRead = (id: number) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
-    );
-
-    // Later: send PATCH /announcements/{id}/read
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
   };
 
   const formatDate = (dateStr: string) => {
@@ -107,13 +95,11 @@ const TeacherNotifications: React.FC = () => {
               Notifications
             </h1>
           </div>
-
           {unreadCount > 0 && (
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-indigo-700 bg-indigo-100 px-4 py-1.5 rounded-full">
                 {unreadCount} unread
               </span>
-
               <button
                 onClick={markAllAsRead}
                 disabled={markingAll || unreadCount === 0}
@@ -166,9 +152,7 @@ const TeacherNotifications: React.FC = () => {
             className="bg-white rounded-2xl shadow-lg p-12 text-center border border-indigo-100"
           >
             <Bell size={64} className="mx-auto text-indigo-300 mb-6" />
-            <h3 className="text-2xl font-semibold text-gray-700 mb-3">
-              No notifications yet
-            </h3>
+            <h3 className="text-2xl font-semibold text-gray-700 mb-3">No notifications yet</h3>
             <p className="text-gray-600 max-w-md mx-auto">
               Important school announcements, schedule changes, and updates will appear here.
             </p>
@@ -184,39 +168,26 @@ const TeacherNotifications: React.FC = () => {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`p-5 rounded-2xl border-l-4 transition-all hover:shadow-md ${
-                  notif.is_read
-                    ? "bg-white border-gray-300"
-                    : "bg-indigo-50 border-indigo-500 shadow-sm"
+                  notif.is_read ? "bg-white border-gray-300" : "bg-indigo-50 border-indigo-500 shadow-sm"
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      {!notif.is_read && (
-                        <span className="h-3 w-3 bg-indigo-600 rounded-full"></span>
-                      )}
-                      <h3
-                        className={`font-bold text-lg ${
-                          notif.is_read ? "text-gray-800" : "text-indigo-900"
-                        }`}
-                      >
+                      {!notif.is_read && <span className="h-3 w-3 bg-indigo-600 rounded-full"></span>}
+                      <h3 className={`font-bold text-lg ${notif.is_read ? "text-gray-800" : "text-indigo-900"}`}>
                         {notif.title}
                       </h3>
                     </div>
-
                     <p className="text-gray-700 whitespace-pre-line mb-3">
-                      {notif.content.length > 220
-                        ? notif.content.substring(0, 220) + "..."
-                        : notif.content}
+                      {notif.content.length > 220 ? notif.content.substring(0, 220) + "..." : notif.content}
                     </p>
-
                     <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                      {notif.target_grades_teachers &&
-                        notif.target_grades_teachers.length > 0 && (
-                          <span className="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full">
-                            Grades {notif.target_grades_teachers.join(", ")}
-                          </span>
-                        )}
+                      {notif.target_grades_teachers && notif.target_grades_teachers.length > 0 && (
+                        <span className="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full">
+                          Grades {notif.target_grades_teachers.join(", ")}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -225,7 +196,6 @@ const TeacherNotifications: React.FC = () => {
                       <Clock size={14} />
                       {formatDate(notif.created_at)}
                     </span>
-
                     {!notif.is_read && (
                       <button
                         onClick={() => markAsRead(notif.id)}

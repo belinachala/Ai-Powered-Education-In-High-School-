@@ -7,12 +7,23 @@ interface HeaderProps {
   onToggleSidebar?: () => void;
 }
 
+interface AnnouncementNotification {
+  id: number;
+  title: string;
+  content: string;
+  created_at: string;
+  is_read?: boolean;
+  target_audience: string;
+  target_grades_teachers?: string[];
+}
+
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [fullName, setFullName] = useState("Teacher");
   const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const navigate = useNavigate();
 
@@ -23,22 +34,35 @@ const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
     // ============================
     // Get teacher profile
     // ============================
-    axios.get(`${API_BASE_URL}/teachers/me/profile`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
+    axios
+      .get(`${API_BASE_URL}/teachers/me/profile`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
         const { first_name, last_name, profile_picture_url } = res.data;
-
-        // Display first + last name
         setFullName(`${first_name || ""} ${last_name || ""}`.trim() || "Teacher");
-
-        // Set profile picture
         if (profile_picture_url) {
           setProfileImage(`${API_BASE_URL}/${profile_picture_url}`);
         }
       })
-      .catch(err => {
+      .catch((err) => {
         console.log("Failed to load teacher profile:", err);
+      });
+
+    // ============================
+    // Get teacher notifications
+    // ============================
+    axios
+      .get(`${API_BASE_URL}/announcements/teacher`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        // count unread notifications
+        const count = (res.data || []).filter((n: AnnouncementNotification) => !n.is_read).length;
+        setUnreadCount(count);
+      })
+      .catch((err) => {
+        console.log("Failed to load teacher notifications:", err);
       });
   }, []);
 
@@ -58,7 +82,6 @@ const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
     navigate("/h-s-teacher/setting");
   };
 
-  // NEW: Navigate to teacher notifications page when bell icon is clicked
   const goToNotifications = () => {
     navigate("/h-s-teacher/notifications");
   };
@@ -68,16 +91,11 @@ const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
       {/* Left Section */}
       <div className="flex items-center gap-4 md:gap-6">
         {onToggleSidebar && (
-          <button
-            onClick={onToggleSidebar}
-            className="text-white text-2xl md:hidden focus:outline-none"
-          >
+          <button onClick={onToggleSidebar} className="text-white text-2xl md:hidden focus:outline-none">
             <Menu />
           </button>
         )}
-        <h5 className="text-lg md:text-2xl font-bold tracking-wide whitespace-nowrap">
-          High School Teacher Panel
-        </h5>
+        <h5 className="text-lg md:text-2xl font-bold tracking-wide whitespace-nowrap">High School Teacher Panel</h5>
       </div>
 
       {/* Search Bar */}
@@ -92,16 +110,18 @@ const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
 
       {/* Right Section */}
       <div className="flex items-center space-x-4 md:space-x-8">
-        {/* Notifications - now clickable */}
+        {/* Notifications */}
         <div
           className="relative cursor-pointer"
-          onClick={goToNotifications}           // ← Added this line
+          onClick={goToNotifications}
           title="View Notifications"
         >
           <Bell className="text-2xl md:text-3xl hover:text-blue-300 transition" />
-          <span className="absolute -top-1 -right-1 bg-red-500 text-xs px-1.5 py-0.5 rounded-full font-bold">
-            4
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-500 text-xs px-1.5 py-0.5 rounded-full font-bold">
+              {unreadCount}
+            </span>
+          )}
         </div>
 
         {/* Profile Dropdown */}
@@ -111,41 +131,24 @@ const HighschoolTeacherHeader: React.FC<HeaderProps> = ({ onToggleSidebar }) => 
             className="flex items-center space-x-2 md:space-x-3 hover:text-blue-300 transition"
           >
             {profileImage ? (
-              <img
-                src={profileImage}
-                alt="Profile"
-                className="w-9 h-9 rounded-full object-cover border"
-              />
+              <img src={profileImage} alt="Profile" className="w-9 h-9 rounded-full object-cover border" />
             ) : (
               <UserCircle className="text-2xl md:text-3xl" />
             )}
-
             <span className="font-medium hidden sm:block">{fullName}</span>
-
-            <ChevronDown
-              className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
-            />
+            <ChevronDown className={`transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} />
           </button>
 
           {dropdownOpen && (
             <div className="absolute right-0 mt-2 w-44 bg-white text-gray-800 rounded-lg shadow-lg z-30">
               <ul className="py-2">
-                <li
-                  onClick={goToProfile}
-                  className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-                >
+                <li onClick={goToProfile} className="px-4 py-2 hover:bg-blue-100 cursor-pointer">
                   My Profile
                 </li>
-                <li
-                  onClick={goToSettings}
-                  className="px-4 py-2 hover:bg-blue-100 cursor-pointer"
-                >
+                <li onClick={goToSettings} className="px-4 py-2 hover:bg-blue-100 cursor-pointer">
                   Settings
                 </li>
-                <li
-                  onClick={handleLogout}
-                  className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-red-600"
-                >
+                <li onClick={handleLogout} className="px-4 py-2 hover:bg-blue-100 cursor-pointer text-red-600">
                   Logout
                 </li>
               </ul>

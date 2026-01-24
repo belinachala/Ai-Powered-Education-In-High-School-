@@ -153,10 +153,10 @@ const TeacherStudents: React.FC = () => {
 
   /* ================= UI ================= */
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h2 className="text-3xl font-bold text-green-800 mb-6 text-center">
-        Teacher – Student Management
-      </h2>
+    <div className="p-3 bg-gray-100 min-h-screen">
+      <h4 className="text-3xl font-bold text-green-800 mb-6 text-center">
+        Teachers – Student Management
+      </h4>
 
       <div className="max-w-md mx-auto mb-6">
         <input
@@ -180,13 +180,13 @@ const TeacherStudents: React.FC = () => {
             >
               <img
                 src={s.profile_picture_url || "/assets/default-avatar.png"}
-                className="w-32 h-32 object-cover border-4 border-green-500 rounded-xl mb-3"
+                className="w-46 h-46 object-cover border-4 border-green-500 rounded-xl mb-3"
               />
 
-              <h3 className="text-xl font-bold text-green-700">
+              <h5 className="text-xl font-bold text-green-700">
                 {s.first_name} {s.last_name}
-              </h3>
-              <p className="text-sm text-gray-600">ID: {s.student_id}</p>
+              </h5>
+              <h4 className="text-sm text-gray-600">Grade: {s.grade_levels}</h4>
 
               <div className="flex gap-2 mt-4">
                 <button

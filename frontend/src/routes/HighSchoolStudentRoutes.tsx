@@ -5,20 +5,20 @@ import Exams from '@/pages/highschool/student/Exams';
 import ResultsFeedback from '@/pages/highschool/student/ResultsFeedback';
 import LearningResources from '@/pages/highschool/student/LearningResources';
 import Notifications from '@/pages/highschool/student/Notifications';
-import StudentDashboard from '@/pages/highschool/student/StudentDashboard';
-import PaidExam from '@/pages/highschool/student/PaidExam';
-import FreeExam from '@/pages/highschool/student/FreeExam';
+import StudentDashboard from '@/pages/highschool/student/StudentDashboard'; 
+import ImagesGallery from '@/pages/highschool/student/ImagesGallery';
+import AvailableExams from '@/pages/highschool/student/AvailableExams';
 const HighSchoolStudentRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="dashboard" element={<StudentDashboard />} />
       <Route path="profile" element={<Profile />} />
-      <Route path="exams" element={<Exams />} />
+      <Route path="available-exams" element={<AvailableExams />} /> 
+      <Route path="re-take-exams" element={<Exams />} />
       <Route path="results" element={<ResultsFeedback />} />
       <Route path="resources" element={<LearningResources />} />
       <Route path="notifications" element={<Notifications />} />
-      <Route path="free-exam" element={<FreeExam />} />
-      <Route path="paid-exam" element={<PaidExam />} />
+      <Route path="images-gallery" element={<ImagesGallery />} /> 
     </Routes>
   );
 };

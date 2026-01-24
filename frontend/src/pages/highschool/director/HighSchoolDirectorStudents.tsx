@@ -175,13 +175,13 @@ const HighSchoolDirectorStudents: React.FC = () => {
             >
               <img
                 src={s.profile_picture_url || "/assets/default-avatar.png"}
-                className="w-32 h-32 object-cover border-4 border-blue-500 rounded-xl mb-3"
+                className="w-42 h-42 object-cover border-4 border-blue-500 rounded-xl mb-3"
               />
 
-              <h3 className="text-xl font-bold text-blue-700">
+              <h5 className="text-xl font-bold text-blue-700">
                 {s.first_name} {s.last_name}
-              </h3>
-              <p className="text-sm text-gray-600">ID: {s.student_id}</p>
+              </h5>
+              <h5 className="text-sm text-gray-600">Grade: {s.grade_levels} Student</h5>
 
               <div className="flex gap-2 mt-4">
                 <button
@@ -214,7 +214,7 @@ const HighSchoolDirectorStudents: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-3 mb-2">
-              <img src={SCHOOL_LOGO} className="w-10 h-10" />
+              <img src={SCHOOL_LOGO} className="w-12 h-12" />
               <p className="font-semibold text-gray-500">EduTena Website</p>
             </div>
 

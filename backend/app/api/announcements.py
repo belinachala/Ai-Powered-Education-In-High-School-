@@ -2,6 +2,7 @@ from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
+from app.models.announcement import Announcement
 from app.schemas.announcement import AnnouncementCreate, AnnouncementOut, AnnouncementUpdate
 from app.services.announcement_service import (
     create_announcement,
@@ -12,8 +13,6 @@ from app.services.announcement_service import (
     get_announcements_for_student_with_reasons,
 )
 from app.db.session import get_db
-
-# uses your existing authentication dependency; adjust if the name differs
 from app.dependencies import get_current_user
 
 router = APIRouter()
@@ -76,6 +75,21 @@ def list_student_announcements(db: Session = Depends(get_db), current_user=Depen
 
     anns = get_announcements_for_student(db, student_grade=student_grade, student_specials=student_specials)
     return anns
+
+@router.get("/announcements/teacher", response_model=List[AnnouncementOut])
+def list_teacher_announcements(db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    """
+    DEBUG: Return all active announcements for teachers (ignores grades for testing).
+    """
+    # Ensure teacher role
+    user_role = getattr(current_user, "role", None)
+    if user_role != "teacher":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only teachers can access this endpoint")
+
+    # Return all active announcements (ignore filtering by teacher grades for now)
+    anns = db.query(Announcement).filter(Announcement.is_active == True).order_by(Announcement.created_at.desc()).all()
+    return anns
+
 
 
 @router.get("/announcements/student/debug")
@@ -156,3 +170,4 @@ def list_student_announcements_debug(
             for item in debug_info
         ]
     }
+    

@@ -19,7 +19,7 @@ class LearningMaterialResponse(BaseModel):
     subject: str
     file_path: str
     file_type: str
-    user_id: int                  # ← Changed from teacher_id to user_id
+    user_id: int              
     approval: str
     created_at: datetime
 
