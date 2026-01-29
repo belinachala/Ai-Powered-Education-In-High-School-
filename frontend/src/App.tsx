@@ -13,6 +13,9 @@ import Contact from './pages/landingpage/Contacts';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
+// Exam Pages
+import TakeExamPage from './pages/highschool/student/TakeExamPage';
+
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout'; 
 
@@ -25,7 +28,6 @@ import HighSchoolStudentSidebar from './components/highschool/students/HighSchoo
 import HighSchoolStudentHeader from './components/highschool/students/HighSchoolStudentHeader';
 
 // Routes
- 
 import HighschoolTeacherRoutes from './routes/HighschoolTeacherRoutes';
 import HighSchoolStudentRoutes from './routes/HighSchoolStudentRoutes';
 import HighSchoolDirectorRoutes from './routes/HighSchoolDirectorRoutes';
@@ -34,7 +36,6 @@ import HighSchoolDirectorRoutes from './routes/HighSchoolDirectorRoutes';
 import TeacherDashboardHome from './pages/highschool/teacher/TeacherDashboardHome';
 
 // profile completion
-
 import HighSchoolDirectorProfileCompletion from './pages/ProfileCompletion/HighSchoolDirectorProfileCompletion';
 import HighSchoolTeachersProfileCompletion from './pages/ProfileCompletion/HighSchoolTeachersProfileCompletion';
 import HighSchoolStudentsProfileCompletion from './pages/ProfileCompletion/HighSchoolStudentsProfileCompletion';
@@ -58,7 +59,12 @@ const App: React.FC = () => {
         <Route path="/directorprofile" element={<HighSchoolDirectorProfileCompletion />} />
         <Route path="/h-s-t-profile" element={<HighSchoolTeachersProfileCompletion />} />
         <Route path="/h-s-s-profile" element={<HighSchoolStudentsProfileCompletion />} />
- 
+
+        {/* CRITICAL: Take Exam Route 
+          This is outside the DashboardLayout so the student has a clean, 
+          distraction-free interface while taking the exam.
+        */}
+        <Route path="/take_exam/:examId" element={<TakeExamPage />} />
 
         {/* High School Director Layout */}
         <Route

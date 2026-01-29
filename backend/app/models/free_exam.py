@@ -8,7 +8,7 @@ class FreeExam(Base):
     __tablename__ = "free_exams"
 
     id = Column(Integer, primary_key=True) 
-    category = Column(String(10), nullable=False, default="free")
+    category = Column(String(10), nullable=False)
     title = Column(Text, nullable=False)
     exam_type = Column(String(100), nullable=False)
     grade = Column(String(50), nullable=False)

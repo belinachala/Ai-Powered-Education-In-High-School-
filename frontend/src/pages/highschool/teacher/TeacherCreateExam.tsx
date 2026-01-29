@@ -1,194 +1,178 @@
 import React from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { motion, Variants } from "framer-motion";
 import {
   BookOpen,
   Brain,
   GraduationCap,
   Sparkles,
-  AlertCircle,
+  ArrowRight,
+  ChevronRight,
+  Zap,
 } from "lucide-react";
 import FreeExamCreation from "./FreeExamCreation";
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 60, scale: 0.92 },
-  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.8, ease: "easeOut" } },
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 40, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1, 
+    transition: { 
+      duration: 0.8, 
+      ease: [0.16, 1, 0.3, 1] 
+    } 
+  },
 };
 
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
+const itemVariants: Variants = {
+  hidden: { opacity: 0, x: -10 },
   visible: (i: number) => ({
     opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1 + 0.3, duration: 0.6 },
+    x: 0,
+    transition: { delay: i * 0.1 + 0.5, duration: 0.5 },
   }),
 };
 
 const TeacherCreateExam: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCreating = location.pathname.includes("free-exam");
+
+  // If we are in the creation sub-route, just render the child and exit
+  if (isCreating) {
+    return <Routes><Route path="free-exam" element={<FreeExamCreation />} /></Routes>;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50/70 via-white to-blue-50/40
-                    dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950/30
-                    relative overflow-hidden flex flex-col items-center px-5 sm:px-8 py-10 md:py-16 transition-colors duration-300">
-
-      {/* Subtle background pattern */}
-      <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.06] pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(#64748b_1px,transparent_1px)] [background-size:24px_24px]" />
+    <div className="min-h-screen relative overflow-hidden flex flex-col items-center px-4 sm:px-6 py-12 transition-colors duration-500 bg-[#fdfeff] dark:bg-[#020617]">
+      
+      {/* --- NEW ATTRACTIVE BACKGROUND LAYER --- */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {/* Soft Mesh Gradients */}
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-200/40 dark:bg-indigo-900/20 blur-[120px]" />
+        <div className="absolute bottom-[10%] right-[-5%] w-[40%] h-[40%] rounded-full bg-blue-100/50 dark:bg-blue-900/10 blur-[100px]" />
+        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-purple-100/30 dark:bg-purple-900/10 blur-[80px]" />
+        
+        {/* Subtle Paper/Technical Grid Pattern */}
+        <div className="absolute inset-0 opacity-[0.4] dark:opacity-[0.1]" 
+             style={{ backgroundImage: `radial-gradient(#6366f1 0.5px, transparent 0.5px)`, backgroundSize: '32px 32px' }} />
       </div>
 
       <div className="relative z-10 w-full max-w-5xl">
-
-        {/* Announcement / Guideline Banner */}
+        
+        {/* Top Badge */}
         <motion.div
-          initial={{ opacity: 0, y: -30 }}
+          initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          className="mb-10 md:mb-14 bg-gradient-to-r from-indigo-600/10 to-blue-600/10 dark:from-indigo-900/30 dark:to-blue-900/20 
-                     border border-indigo-200/60 dark:border-indigo-700/40 rounded-2xl p-5 sm:p-6 shadow-sm backdrop-blur-sm"
+          className="flex justify-center mb-8"
         >
-          <div className="flex items-start gap-6">
-            <div className="p-3 bg-indigo-100 dark:bg-indigo-800/40 rounded-xl flex-shrink-0">
-              <Sparkles className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-indigo-900 dark:text-indigo-100 mb-1.5 flex items-center gap-2">
-                Welcome Ethiopian Educators! <span className="text-xs bg-indigo-600/80 text-white px-2.5 py-0.5 rounded-full font-medium">New 2026</span>
-              </h3>
-              <p className="text-indigo-800/90 dark:text-indigo-300 text-base leading-relaxed">
-                Create unlimited <strong>Free </strong>and <strong>Paid practice exams</strong> with powerful AI assistance. Save up to 80% time • Ethiopian curriculum aligned • Instant question generation & answer keys.
-              </p>
-            </div>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border border-indigo-100 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 text-sm font-semibold shadow-sm">
+            <Sparkles size={14} className="fill-current" />
+            <span>2026 Ethiopian Curriculum Support</span>
+            <ChevronRight size={14} />
           </div>
         </motion.div>
 
         {/* Hero Section */}
         <motion.div
-          initial={{ opacity: 0, y: -40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.9 }}
-          className="text-center mb-14 md:mb-20"
+          transition={{ duration: 0.8 }}
+          className="text-center mb-16"
         >
-           
-
-          <h3 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-indigo-950 dark:text-indigo-50 tracking-tight leading-tight"> 
-            <span className="block mt-2 text-3xl sm:text-2xl md:text-2xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              with Ethiopian AI
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight mb-6 text-slate-900 dark:text-white leading-[1.1]">
+            Generate Exams <br />
+            <span className="bg-gradient-to-r from-indigo-600 via-blue-600 to-violet-500 bg-clip-text text-transparent">
+              in Seconds, Not Hours.
             </span>
-          </h3>
-
-          <p className="mt-6 text-lg md:text-xl text-slate-700 dark:text-slate-300 max-w-3xl mx-auto font-medium leading-relaxed">
-            Fast, Smart, Curriculum-aligned exam builder — designed for Ethiopian High School and Remedial Program teachers.
+          </h1>
+          <p className="text-lg md:text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto leading-relaxed font-medium">
+            AI-powered drafting for High School & Remedial programs. 
+            Aligned with the latest Ethiopian Ministry of Education standards.
           </p>
         </motion.div>
 
-        {/* Main Free Exam Card – bigger & more premium */}
+        {/* Main Selection Card with "Glassmorphism" */}
         <motion.div
           variants={cardVariants}
           initial="hidden"
           animate="visible"
-          whileHover={{ y: -12, scale: 1.03, transition: { duration: 0.4 } }}
-          onClick={() => navigate("/h-s-teacher/free-exam")}
-          className="group relative bg-white/90 dark:bg-gray-800/70 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200/80 dark:border-slate-700/50 
-                     overflow-hidden cursor-pointer max-w-4xl mx-auto"
+          whileHover={{ y: -8 }}
+          className="group relative max-w-5xl mx-auto"
         >
-          {/* Gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-          <div className="relative p-8 sm:p-12 md:p-16 lg:p-20 flex flex-col items-center text-center">
-
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ delay: 0.4, duration: 0.7 }}
-              className="mb-10"
-            >
-              <div className="w-14 h-14 sm:w-18 sm:h-18 md:w-14 md:h-16 rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shadow-2xl group-hover:rotate-6 transition-transform duration-500">
-                <BookOpen className="w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 text-white" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-[2.5rem] blur opacity-15 group-hover:opacity-25 transition duration-1000 group-hover:duration-200"></div>
+          
+          <div className="relative bg-white/90 dark:bg-gray-900/90 backdrop-blur-xl border border-white dark:border-gray-800 rounded-[2.5rem] shadow-2xl overflow-hidden">
+            <div className="grid md:grid-cols-5 items-stretch">
+              
+              {/* Left Column (Image & Icon) */}
+              <div className="md:col-span-2 bg-indigo-50/50 dark:bg-indigo-900/20 p-8 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-slate-100 dark:border-gray-800">
+                <div className="relative mb-8 w-full aspect-video rounded-2xl overflow-hidden border border-white dark:border-gray-700 shadow-inner group-hover:scale-[1.02] transition-transform duration-500">
+                  <img 
+                    src="assets/create-exan.png" 
+                    alt="Creation Tool" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.currentTarget.src = "https://images.unsplash.com/photo-1434030216411-0b793f4b4173?q=80&w=600"; }}
+                  />
+                  <div className="absolute inset-0 bg-indigo-900/10 group-hover:bg-transparent transition-colors" />
+                </div>
+                <div className="text-center">
+                   <p className="text-indigo-600 dark:text-indigo-400 font-bold text-lg">Free Tier</p>
+                   <p className="text-slate-500 dark:text-slate-400 text-xs font-bold uppercase tracking-[0.2em]">Unlimited Usage</p>
+                </div>
               </div>
-            </motion.div>
 
-            <h4 className="text-4xl sm:text-5xl font-bold text-indigo-900 dark:text-indigo-50 mb-6">
-              Free Exam Creator
-            </h4>
+              {/* Right Column (Details) */}
+              <div className="md:col-span-3 p-10 md:p-14">
+                <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">Free Exam Creator</h2>
+                <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed font-medium">
+                  Perfect for classroom practice and revision. Access our AI question bank to generate curriculum-aligned assessments instantly.
+                </p>
 
-            <p className="text-lg sm:text-xl text-slate-700 dark:text-slate-300 mb-10 max-w-1xl leading-relaxed">
-              Unlimited creation • AI-powered questions • Instant grading keys • Perfect for classroom practice, revision & mock exams — no limits, no payment needed.
-            </p>
+                <div className="grid grid-cols-1 gap-4 mb-10">
+                  {[
+                    { icon: Zap, text: "Instant MCQ & Short Answers", color: "text-amber-500" },
+                    { icon: GraduationCap, text: "Supports Grade 9-12 & Remedial", color: "text-blue-500" },
+                    { icon: Brain, text: "Adaptive Difficulty Selection", color: "text-violet-500" },
+                  ].map((feat, i) => (
+                    <motion.div 
+                      key={i} custom={i} variants={itemVariants}
+                      className="flex items-center gap-3 bg-white/50 dark:bg-gray-800/40 p-3.5 rounded-2xl border border-slate-100 dark:border-gray-700 shadow-sm"
+                    >
+                      <div className={`p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm ${feat.color}`}>
+                        <feat.icon size={18} />
+                      </div>
+                      <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{feat.text}</span>
+                    </motion.div>
+                  ))}
+                </div>
 
-            {/* Feature highlights */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12 w-full max-w-2xl">
-              {[
-                { icon: Brain, text: "AI generates questions in seconds" },
-                { icon: GraduationCap, text: "Supports Ethiopian New curriculum" },
-                { icon: Sparkles, text: "Beautiful PDFs & sharing" },
-              ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  custom={i}
-                  variants={itemVariants}
-                  initial="hidden"
-                  animate="visible"
-                  className="flex flex-col items-center gap-3"
+                <button
+                  onClick={() => navigate("/h-s-teacher/free-exam")}
+                  className="group/btn w-full flex items-center justify-center gap-3 px-8 py-5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-2xl shadow-xl shadow-indigo-200 dark:shadow-none transition-all transform active:scale-95"
                 >
-                  <div className="p-4 bg-blue-100/70 dark:bg-blue-900/30 rounded-xl">
-                    <item.icon className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <p className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 text-center">
-                    {item.text}
-                  </p>
-                </motion.div>
-              ))}
+                  Start Creating Now
+                  <ArrowRight size={20} className="group-hover/btn:translate-x-1 transition-transform" />
+                </button>
+              </div>
             </div>
-
-            <motion.div
-              whileHover={{ scale: 1.06 }}
-              whileTap={{ scale: 0.98 }}
-              className="inline-block"
-            >
-              <span className="inline-flex items-center gap-3 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 
-                               hover:from-blue-700 hover:to-indigo-700 text-white font-semibold text-xl rounded-2xl shadow-lg transition-all">
-                Start Creating Free Exam
-                <Sparkles className="w-3 h-3" />
-              </span>
-            </motion.div>
           </div>
         </motion.div>
 
-        {/* Motivation / Stat Box */}
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="mt-16 md:mt-24 bg-white/60 dark:bg-gray-800/50 backdrop-blur-lg rounded-3xl p-6 md:p-7 shadow-xl border border-indigo-100/50 dark:border-indigo-800/30 text-center max-w-4xl mx-auto"
-        >
-          <Brain className="w-12 h-12 mx-auto mb-6 text-indigo-600 dark:text-indigo-400" />
-          <p className="text-xl md:text-1xl font-semibold text-indigo-900 dark:text-indigo-100 leading-relaxed">
-            Teachers using AI create exams <span className="text-indigo-600 dark:text-indigo-400 font-bold">60% faster </span>  
-            with higher quality questions start today!
-          </p>
-        </motion.div>
+        {/* Stats Row */}
+        <div className="mt-16 flex flex-wrap justify-center gap-6 max-w-4xl mx-auto">
+          {[
+            { label: "Efficiency Increase", val: "60% Faster", color: "text-indigo-600" },
+            { label: "Smart Question Sourcing", val: "AI-Guided", color: "text-blue-600" }
+          ].map((stat, i) => (
+            <div key={i} className="flex-1 min-w-[240px] p-8 rounded-[2rem] bg-white/40 dark:bg-gray-900/40 backdrop-blur-md border border-white dark:border-gray-800 text-center shadow-sm">
+               <div className={`${stat.color} font-black text-3xl mb-1`}>{stat.val}</div>
+               <p className="text-slate-500 dark:text-slate-400 text-sm font-bold uppercase tracking-wider">{stat.label}</p>
+            </div>
+          ))}
+        </div>
 
-        {/* Footer quote */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 1 }}
-          className="mt-16 md:mt-24 text-center text-slate-600 dark:text-slate-400 italic text-lg md:text-xl"
-        >
-          “The best teachers are those who show you where to look but don't tell you what to see.”  
-          <span className="block mt-4 text-base not-italic text-indigo-600/80 dark:text-indigo-400/80">
-            — Designed for Ethiopian High School Teachers • 2026
-          </span>
-        </motion.p>
-
-      </div>
-
-      {/* Nested route */}
-      <div className="w-full max-w-6xl mt-16">
-        <Routes>
-          <Route path="free-exam" element={<FreeExamCreation />} />
-        </Routes>
       </div>
     </div>
   );

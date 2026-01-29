@@ -1,5 +1,6 @@
-import React from "react";
-import { Users, FileText, BookOpen, Award, CalendarCheck } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { Users, FileText, BookOpen, Award } from "lucide-react";
 import { Bar, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -14,10 +15,48 @@ import {
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement);
 
+const BACKEND_URL = "http://127.0.0.1:8000";
+
 const TeacherDashboardHome: React.FC = () => {
+  const [totalStudents, setTotalStudents] = useState<number>(0);
+  const [totalExams, setTotalExams] = useState<number>(0);
+
+  // --- FETCH DASHBOARD DATA ---
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const headers = { Authorization: `Bearer ${token}` };
+
+    // 1. Fetch Students Count
+    axios
+      .get(`${BACKEND_URL}/teachers/students`, { headers })
+      .then((res) => {
+        const data = res.data.students || res.data || [];
+        setTotalStudents(data.length);
+      })
+      .catch((err) => console.error("Error fetching students:", err));
+
+    // 2. Fetch Exams Count
+    axios
+      .get(`${BACKEND_URL}/free-exams/`, { headers })
+      .then((res) => {
+        const data = res.data;
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data?.items)
+          ? data.items
+          : Array.isArray(data?.results)
+          ? data.results
+          : [];
+        setTotalExams(list.length);
+      })
+      .catch((err) => console.error("Error fetching exams:", err));
+  }, []);
+
   const stats = [
-    { id: 1, title: "Total Students", value: 120, icon: <Users size={24} className="text-white" />, color: "from-purple-500 to-purple-700" },
-    { id: 2, title: "Exams Created", value: 14, icon: <FileText size={24} className="text-white" />, color: "from-indigo-500 to-indigo-700" },
+    { id: 1, title: "Total Students", value: totalStudents, icon: <Users size={24} className="text-white" />, color: "from-purple-500 to-purple-700" },
+    { id: 2, title: "Exams Created", value: totalExams, icon: <FileText size={24} className="text-white" />, color: "from-indigo-500 to-indigo-700" },
     { id: 3, title: "Courses Assigned", value: 5, icon: <BookOpen size={24} className="text-white" />, color: "from-pink-500 to-pink-700" },
     { id: 4, title: "Results Submitted", value: 110, icon: <Award size={24} className="text-white" />, color: "from-yellow-400 to-yellow-600" },
   ];
@@ -61,14 +100,6 @@ const TeacherDashboardHome: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome */}
-      <div className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white p-6 rounded-3xl shadow-lg flex flex-col md:flex-row items-center justify-between hover:scale-105 transform transition-transform duration-300">
-        <div>
-          <h1 className="text-3xl font-bold">Welcome Back, Mr. Tesfaye 👋</h1>
-          <p className="text-purple-200 mt-2">Here’s a colorful, interactive overview of your dashboard.</p>
-        </div>
-        <CalendarCheck size={48} className="mt-4 md:mt-0 animate-bounce" />
-      </div>
 
       {/* Stats Cards */}
       <div className="grid md:grid-cols-4 sm:grid-cols-2 gap-6">

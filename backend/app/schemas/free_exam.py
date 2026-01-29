@@ -3,8 +3,11 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, Field, model_validator
 from datetime import datetime
 
+# Define Literals for consistency
 QuestionType = Literal["MCQ", "TRUE_FALSE", "BLANK", "MATCHING"]
+CategoryType = Literal["free", "paid"]
 
+# ----- Supporting Question Schemas -----
 
 class MCQOptions(BaseModel):
     A: str
@@ -12,14 +15,12 @@ class MCQOptions(BaseModel):
     C: str
     D: str
 
-
 class MatchingPairIn(BaseModel):
     left: str
     right: str
 
-
 class QuestionCreate(BaseModel):
-    id: str
+    id: str  # client-side temporary ID
     type: QuestionType
     text: Optional[str] = ""
     options: Optional[MCQOptions] = None
@@ -56,8 +57,10 @@ class QuestionCreate(BaseModel):
 
         return self
 
+# ----- Exam Creation Schema -----
 
 class FreeExamCreate(BaseModel):
+    category: CategoryType = Field(..., description="Must be 'free' or 'paid'")
     title: str = Field(..., min_length=1)
     exam_type: str = Field(..., min_length=1)
     grade: str = Field(..., min_length=1)
@@ -68,14 +71,13 @@ class FreeExamCreate(BaseModel):
     questions: List[QuestionCreate]
     total_questions: int = Field(..., ge=0)
 
+# ----- Output Schemas -----
 
-# ----- Output schemas -----
 class MCQOptionOut(BaseModel):
     key: str
     text: str
 
     model_config = {"from_attributes": True}
-
 
 class MatchingPairOut(BaseModel):
     position: int
@@ -84,10 +86,9 @@ class MatchingPairOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
 class QuestionOut(BaseModel):
     id: int
-    client_id: Optional[str]
+    client_id: Optional[str] = None
     type: QuestionType
     text: Optional[str] = None
     answer: Optional[str] = None
@@ -97,9 +98,9 @@ class QuestionOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
 class FreeExamDetailResponse(BaseModel):
     id: int
+    category: str
     title: str
     exam_type: str
     grade: str
@@ -118,7 +119,6 @@ class FreeExamDetailResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
 class FreeExamResponse(BaseModel):
     id: int
     status: str
@@ -126,13 +126,14 @@ class FreeExamResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
-
-# Lightweight list item
+# Lightweight list item used for grids/tables
 class FreeExamListItem(BaseModel):
     id: int
+    category: str
     title: str
     subject: str
     grade: str
+    stream: Optional[str] = None
     status: str
     total_questions: int
     start_datetime: Optional[datetime] = None
@@ -140,22 +141,18 @@ class FreeExamListItem(BaseModel):
 
     model_config = {"from_attributes": True}
 
+# ----- Update Schemas -----
 
-# ----- New: input types for updates -----
 class MCQOptionIn(BaseModel):
     key: str
     text: str
 
-
 class MatchingPairUpdateIn(BaseModel):
     left_text: str
     right_text: str
-
 
 class QuestionUpdate(BaseModel):
     text: Optional[str] = None
     answer: Optional[str] = None
     mcq_options: Optional[List[MCQOptionIn]] = None
     matching_pairs: Optional[List[MatchingPairUpdateIn]] = None
-
-    # extra validation can be added if needed
